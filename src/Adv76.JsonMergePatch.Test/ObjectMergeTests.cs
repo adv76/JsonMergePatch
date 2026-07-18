@@ -20,14 +20,17 @@ public sealed class ObjectMergeTests
             String1 = "hello"
         };
 
-        var patch = new JsonObject { { "Int1", 1 } };
-
-        var result = obj.MergePatch(patch);
+        //var patch = new JsonObject { { "Int1", 1 } };
+        var patch = new JsonMergePatch<Class1>("{\"Int1\": 1}");
         
-        Assert.IsNotNull(result);
+        patch.ApplyTo(ref obj);
         
-        Assert.AreEqual(1, result.Int1);
-        Assert.AreEqual("hello", result.String1);
+        //var result = obj.MergePatch(patch);
+        
+        //Assert.IsNotNull(result);
+        
+        Assert.AreEqual(1, obj.Int1);
+        Assert.AreEqual("hello", obj.String1);
     }
     
     [TestMethod]

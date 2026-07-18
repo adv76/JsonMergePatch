@@ -35,4 +35,12 @@ public static class PatchExtensions
             throw new JsonMergePatchException("An error occurred while applying the merge patch.", e);
         }
     }
+
+    public static void MergePatch<T>(ref T? obj, JsonDocument? patch)
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(patch);
+        
+        
+    }
 }
