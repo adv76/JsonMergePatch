@@ -1,0 +1,6 @@
+@Adv76.AspNetCore.JsonMergePatch.Test_HostAddress = http://localhost:5130
+
+GET {{Adv76.AspNetCore.JsonMergePatch.Test_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
