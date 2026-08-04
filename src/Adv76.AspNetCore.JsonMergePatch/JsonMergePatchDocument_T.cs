@@ -11,7 +11,7 @@ public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatch
 {
     private readonly JsonMergePatch<T> _patch;
 
-    internal JsonMergePatchDocument(JsonMergePatch<T> patch)
+    private JsonMergePatchDocument(JsonMergePatch<T> patch)
     {
         _patch = patch;
     }

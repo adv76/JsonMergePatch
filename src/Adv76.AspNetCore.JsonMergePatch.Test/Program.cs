@@ -24,7 +24,9 @@ var class1 = new Class1()
     Int1 = 1,
     NullableInt1 = 1,
     String1 = "Hello",
-    NullableString1 = "World"
+    NullableString1 = "World",
+    RequiredString1 = "Required",
+    RequiredString2 = "Required2",
 };
 
 app.MapGet("/class1", () => class1);

@@ -28,20 +28,27 @@ public class JsonMergePatch<T>
         ArgumentNullException.ThrowIfNull(obj);
         
         var reader = new Utf8JsonReader(_patchBytes);
-        
-        reader.Read();
-        if (reader.TokenType == JsonTokenType.StartObject)
+
+        try
         {
-            ApplyToObject(ref reader, ref obj);
+            reader.Read();
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                ApplyToObject(ref reader, ref obj);
+            }
+            else
+            {
+                var converter = _options.GetConverter(typeof(T));
+
+                var read = Create(typeof(T));
+                var value = read(converter, ref reader, typeof(T), _options);
+
+                obj = (T)value!;
+            }
         }
-        else
+        catch (Exception e) when (e is not OperationCanceledException or JsonMergePatchException)
         {
-            var converter = _options.GetConverter(typeof(T));
-
-            var read = Create(typeof(T));
-            var value = read(converter, ref reader, typeof(T), _options);
-
-            obj = (T)value!;
+            throw new JsonMergePatchException("Json Merge Patch failed to apply.", e);
         }
     }
 
@@ -67,12 +74,12 @@ public class JsonMergePatch<T>
             var matchingProperty = typeInfo.Properties.FirstOrDefault(x => x.Name == propertyName);
             if (matchingProperty is null)
             {
-                throw new JsonMergePatchException($"Property {propertyName} not found in type {typeInfo.Type}");
+                throw new JsonMergePatchException($"Property {propertyName} not found in type {typeInfo.Type}.");
             }
 
             if (matchingProperty.Set is null)
             {
-                throw new JsonMergePatchException($"Property {propertyName} cannot be set in type {typeInfo.Type}");
+                throw new JsonMergePatchException($"Property {propertyName} cannot be set in type {typeInfo.Type}.");
             }
                 
             if (reader.TokenType == JsonTokenType.StartObject)
@@ -91,6 +98,11 @@ public class JsonMergePatch<T>
                 var read = Create(matchingProperty.PropertyType);
                 var value = read(converter, ref reader, matchingProperty.PropertyType, _options);
 
+                if (matchingProperty.IsRequired && value is null)
+                {
+                    throw new JsonMergePatchException($"Property {propertyName} is required and cannot be set to 'null'.");
+                }
+                
                 matchingProperty.Set(obj, value);
             }
                 

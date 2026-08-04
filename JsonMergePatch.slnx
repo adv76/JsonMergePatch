@@ -1,6 +1,6 @@
 <Solution>
-  <Project Path="Adv76.AspNetCore.JsonMergePatch.Test/Adv76.AspNetCore.JsonMergePatch.Test.csproj" />
+  <Project Path="src/Adv76.AspNetCore.JsonMergePatch.Test/Adv76.AspNetCore.JsonMergePatch.Test.csproj" />
   <Project Path="src/Adv76.JsonMergePatch.Test/Adv76.JsonMergePatch.Test.csproj" />
   <Project Path="src/Adv76.JsonMergePatch/Adv76.JsonMergePatch.csproj" />
-  <Project Path="src\Adv76.AspNetCore.JsonMergePatch\Adv76.AspNetCore.JsonMergePatch.csproj" />
+  <Project Path="src/Adv76.AspNetCore.JsonMergePatch/Adv76.AspNetCore.JsonMergePatch.csproj" />
 </Solution>

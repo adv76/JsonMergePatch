@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\src\Adv76.AspNetCore.JsonMergePatch\Adv76.AspNetCore.JsonMergePatch.csproj" />
+      <ProjectReference Include="..\Adv76.AspNetCore.JsonMergePatch\Adv76.AspNetCore.JsonMergePatch.csproj" />
     </ItemGroup>
 
 </Project>
