@@ -1,4 +1,6 @@
+using System.Runtime.InteropServices.ComTypes;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Adv76.JsonMergePatch.Test;
 
@@ -15,6 +17,40 @@ public sealed class ObjectMergeTests
     {   
         public Class1? Class1 { get; set; }
         public string? String1 { get; set; }
+    }
+
+    private class Class3()
+    {
+        [JsonMergeConverterBehavior(Behavior = JsonMergeConverterBehavior.UseCustomConverter)]
+        [JsonConverter(typeof(TimeSpanJsonConverter))]
+        public TimeSpan TimeSpan1 { get; set; }
+
+        public class TimeSpanJsonConverter : JsonConverter<TimeSpan>
+        {
+            public override TimeSpan Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                reader.Read();
+                var p1 = reader.GetString();
+                reader.Read();
+                var v1 = reader.GetInt32();
+                reader.Read();
+                var p2 = reader.GetString();
+                reader.Read();
+                var v2 = reader.GetInt32();
+                reader.Read();
+                return new TimeSpan(p1 == "hr" ? v1 : v2, p1 == "min" ? v1 : v2, 0);
+            }
+
+            public override void Write(Utf8JsonWriter writer, TimeSpan value, JsonSerializerOptions options)
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("hr");
+                writer.WriteNumberValue(value.Hours);
+                writer.WritePropertyName("min");
+                writer.WriteNumberValue(value.Minutes);
+                writer.WriteEndObject();
+            }
+        }
     }
     
     [TestMethod]
@@ -128,5 +164,21 @@ public sealed class ObjectMergeTests
         
         Assert.AreEqual(1, obj.Int1);
         Assert.AreEqual("hello", obj.String1);
+    }
+
+    [TestMethod]
+    public void CustomObjectConverterTest()
+    {
+        var obj = new Class3()
+        {
+            TimeSpan1 = new TimeSpan(2, 3, 0)
+        };
+
+        var patch = "{\"TimeSpan1\": {\"hr\": 4,\"min\": 5}}";
+        
+        JsonMergePatcher.ApplyTo(ref obj, patch);
+        
+        Assert.AreEqual(4, obj.TimeSpan1.Hours);
+        Assert.AreEqual(5, obj.TimeSpan1.Minutes);
     }
 }

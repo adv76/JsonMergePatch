@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Adv76.JsonMergePatch;
 
 namespace Adv76.JsonMergePatch;
@@ -52,7 +53,6 @@ public static partial class JsonMergePatcher
         ArgumentNullException.ThrowIfNull(obj);
         
         var typeInfo = jsonOptions.GetTypeInfo(obj.GetType());
-
         reader.Read();
 
         while (reader.TokenType != JsonTokenType.EndObject)
@@ -76,11 +76,13 @@ public static partial class JsonMergePatcher
             {
                 throw new JsonMergePatchException($"Property {propertyName} cannot be set in type {typeInfo.Type}.");
             }
+
+            
                 
-            if (reader.TokenType == JsonTokenType.StartObject)
+            if (reader.TokenType == JsonTokenType.StartObject && !UseCustomConverterForObject(matchingProperty))
             {
                 var existing = matchingProperty.Get?.Invoke(obj) ?? Activator.CreateInstance(matchingProperty.PropertyType);
-
+                
                 ApplyToObject(ref reader, ref existing, jsonOptions);
                 
                 matchingProperty.Set(obj, existing);
@@ -103,6 +105,20 @@ public static partial class JsonMergePatcher
                 
             reader.Read();
         }
+    }
+
+    private static bool UseCustomConverterForObject(JsonPropertyInfo matchingProperty)
+    {
+        if (matchingProperty.AttributeProvider is not null)
+        {
+            var attributes = matchingProperty.AttributeProvider.GetCustomAttributes(typeof(JsonMergeConverterBehaviorAttribute), true);
+            if (attributes.Length > 0 && attributes[^1] is JsonMergeConverterBehaviorAttribute attribute)
+            {
+                return attribute.Behavior == JsonMergeConverterBehavior.UseCustomConverter;
+            }
+        }
+
+        return false;
     }
     
     private delegate object? ReadDelegate(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o);
