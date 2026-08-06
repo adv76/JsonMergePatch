@@ -29,6 +29,8 @@ var class1 = new Class1()
     RequiredString2 = "Required2",
 };
 
+app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
+
 app.MapGet("/class1", () => class1);
 
 app.MapPatch("/class1", (JsonMergePatchDocument<Class1> doc) =>
@@ -36,6 +38,6 @@ app.MapPatch("/class1", (JsonMergePatchDocument<Class1> doc) =>
     doc.ApplyTo(ref class1);
     
     return class1;
-});
+}).AcceptsJsonMergePatch();
 
 app.Run();
