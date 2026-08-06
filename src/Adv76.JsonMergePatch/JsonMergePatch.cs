@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 
 namespace Adv76.JsonMergePatch;
 
-public static class JsonMergePatch
+public static partial class JsonMergePatcher
 {
     public static JsonNode? Merge(JsonNode? obj, JsonNode? patch)
     {

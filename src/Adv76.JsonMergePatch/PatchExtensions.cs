@@ -24,7 +24,7 @@ public static class PatchExtensions
     {
         var jsonT = JsonSerializer.SerializeToNode(obj);
 
-        var result = JsonMergePatch.Merge(jsonT, patch);
+        var result = JsonMergePatcher.Merge(jsonT, patch);
 
         try
         {

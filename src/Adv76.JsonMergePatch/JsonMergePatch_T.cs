@@ -2,46 +2,41 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Adv76.JsonMergePatch;
 
 namespace Adv76.JsonMergePatch;
 
-public class JsonMergePatch<T>
+public static partial class JsonMergePatcher
 {
-    private readonly byte[] _patchBytes;
-
-    private readonly JsonSerializerOptions _options;
-    
-    public JsonMergePatch(byte[] patchBytes, JsonSerializerOptions? jsonOptions = null)
+    public static void ApplyTo<T>(ref T obj, string patchString, JsonSerializerOptions? jsonOptions = null)
     {
-        _patchBytes = patchBytes;
-        _options = jsonOptions ?? JsonSerializerOptions.Default;
+        var patchBytes = Encoding.UTF8.GetBytes(patchString);
+        
+        ApplyTo(ref obj, patchBytes, jsonOptions);
     }
     
-    public JsonMergePatch(string patchString, JsonSerializerOptions? jsonOptions = null)
-    {
-        _patchBytes = Encoding.UTF8.GetBytes(patchString);
-        _options = jsonOptions ?? JsonSerializerOptions.Default;
-    }
-
-    public void ApplyTo(ref T obj)
+    public static void ApplyTo<T>(ref T obj, byte[] patchBytes, JsonSerializerOptions? jsonOptions = null)
     {
         ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(patchBytes);
         
-        var reader = new Utf8JsonReader(_patchBytes);
+        jsonOptions ??= JsonSerializerOptions.Default;
+        
+        var reader = new Utf8JsonReader(patchBytes);
 
         try
         {
             reader.Read();
             if (reader.TokenType == JsonTokenType.StartObject)
             {
-                ApplyToObject(ref reader, ref obj);
+                ApplyToObject(ref reader, ref obj, jsonOptions);
             }
             else
             {
-                var converter = _options.GetConverter(typeof(T));
+                var converter = jsonOptions.GetConverter(typeof(T));
 
                 var read = Create(typeof(T));
-                var value = read(converter, ref reader, typeof(T), _options);
+                var value = read(converter, ref reader, typeof(T), jsonOptions);
 
                 obj = (T)value!;
             }
@@ -52,11 +47,11 @@ public class JsonMergePatch<T>
         }
     }
 
-    private void ApplyToObject<TInner>(ref Utf8JsonReader reader, ref TInner obj)
+    private static void ApplyToObject<TInner>(ref Utf8JsonReader reader, ref TInner obj, JsonSerializerOptions jsonOptions)
     {
         ArgumentNullException.ThrowIfNull(obj);
         
-        var typeInfo = _options.GetTypeInfo(obj.GetType());
+        var typeInfo = jsonOptions.GetTypeInfo(obj.GetType());
 
         reader.Read();
 
@@ -86,17 +81,17 @@ public class JsonMergePatch<T>
             {
                 var existing = matchingProperty.Get?.Invoke(obj) ?? Activator.CreateInstance(matchingProperty.PropertyType);
 
-                ApplyToObject(ref reader, ref existing);
+                ApplyToObject(ref reader, ref existing, jsonOptions);
                 
                 matchingProperty.Set(obj, existing);
             }
             else
             {
                 var converter = (matchingProperty.CustomConverter ??
-                                 _options.GetConverter(matchingProperty.PropertyType));
+                                 jsonOptions.GetConverter(matchingProperty.PropertyType));
 
                 var read = Create(matchingProperty.PropertyType);
-                var value = read(converter, ref reader, matchingProperty.PropertyType, _options);
+                var value = read(converter, ref reader, matchingProperty.PropertyType, jsonOptions);
 
                 if (matchingProperty.IsRequired && value is null)
                 {
@@ -114,7 +109,7 @@ public class JsonMergePatch<T>
 
     private static ReadDelegate Create(Type valueType)
     {
-        var m = typeof(JsonMergePatch<object>).GetMethod(nameof(Read), BindingFlags.Static | BindingFlags.NonPublic)!
+        var m = typeof(JsonMergePatcher).GetMethod(nameof(Read), BindingFlags.Static | BindingFlags.NonPublic)!
             .MakeGenericMethod(valueType);
 
         return m.CreateDelegate<ReadDelegate>();

@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Text.Json;
 using Adv76.JsonMergePatch;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Json;
@@ -9,16 +10,18 @@ namespace Adv76.AspNetCore.JsonMergePatch;
 
 public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatchDocument<T>>
 {
-    private readonly JsonMergePatch<T> _patch;
-
-    private JsonMergePatchDocument(JsonMergePatch<T> patch)
+    private readonly JsonSerializerOptions? _jsonOptions;
+    private readonly string _jsonBodyString;
+    
+    private JsonMergePatchDocument(string jsonBodyString, JsonSerializerOptions? jsonOptions = null)
     {
-        _patch = patch;
+        _jsonBodyString = jsonBodyString;
+        _jsonOptions = jsonOptions;
     }
     
     public void ApplyTo(ref T obj)
     {
-        _patch.ApplyTo(ref obj);
+        JsonMergePatcher.ApplyTo(ref obj, _jsonBodyString, _jsonOptions);
     }
     
     public static async ValueTask<JsonMergePatchDocument<T>?> BindAsync(HttpContext context, ParameterInfo parameter)
@@ -28,6 +31,6 @@ public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatch
         using var sr = new StreamReader(context.Request.Body);
         var bodyString = await sr.ReadToEndAsync();
 
-        return new JsonMergePatchDocument<T>(new JsonMergePatch<T>(bodyString, jsonOptions?.Value.SerializerOptions));
+        return new JsonMergePatchDocument<T>(bodyString, jsonOptions?.Value.SerializerOptions);
     }
 }

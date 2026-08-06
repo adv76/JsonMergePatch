@@ -19,7 +19,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", "c" } };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -35,7 +35,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "b", "c" } };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -51,7 +51,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", null } };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -67,7 +67,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", null } };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -83,7 +83,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", "c" } };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -99,7 +99,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", new JsonArray([ "b" ])} };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -116,7 +116,7 @@ public sealed class Rfc7396Tests
         var patch = new JsonObject { { "a", new JsonObject{ { "b", "d" }, { "c", null } } } };
 
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -132,7 +132,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", new JsonArray([ 1 ])} };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -148,7 +148,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonArray(["c", "d"]);
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -164,7 +164,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonArray([ "c" ]);
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -180,7 +180,7 @@ public sealed class Rfc7396Tests
 
         var patch = JsonValue.Create((string?)null); // TODO revisit
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNull(result);
 
@@ -196,7 +196,7 @@ public sealed class Rfc7396Tests
 
         var patch = JsonValue.Create("bar");
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -212,7 +212,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", 1 } };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -228,7 +228,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", "b" }, { "c", null } };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 
@@ -244,7 +244,7 @@ public sealed class Rfc7396Tests
 
         var patch = new JsonObject { { "a", new JsonObject{ { "bb", new JsonObject{ { "ccc", null } } } } } };
 
-        var result = JsonMergePatch.Merge(obj, patch);
+        var result = JsonMergePatcher.Merge(obj, patch);
         
         Assert.IsNotNull(result);
 

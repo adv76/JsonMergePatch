@@ -26,9 +26,9 @@ public sealed class ObjectMergeTests
             String1 = "hello"
         };
 
-        var patch = new JsonMergePatch<Class1>("{\"Int1\": 1}");
+        var patch = "{\"Int1\": 1}";
         
-        patch.ApplyTo(ref obj);
+        JsonMergePatcher.ApplyTo(ref obj, patch);
         
         Assert.AreEqual(1, obj.Int1);
         Assert.AreEqual("hello", obj.String1);
@@ -43,9 +43,9 @@ public sealed class ObjectMergeTests
             String1 = "hello"
         };
 
-        var patch = new JsonMergePatch<Class1>("{\"String1\": null}");
+        var patch = "{\"String1\": null}";
         
-        patch.ApplyTo(ref obj);
+        JsonMergePatcher.ApplyTo(ref obj, patch);
         
         Assert.AreEqual(3, obj.Int1);
         Assert.IsNull(obj.String1);
@@ -64,9 +64,9 @@ public sealed class ObjectMergeTests
             String1 = "hello"
         };
 
-        var patch = new JsonMergePatch<Class2>("{\"Class1\": { \"Int1\": 1 }}");
+        var patch = "{\"Class1\": { \"Int1\": 1 }}";
         
-        patch.ApplyTo(ref obj);
+        JsonMergePatcher.ApplyTo(ref obj, patch);
         
         Assert.AreEqual(1, obj.Class1?.Int1);
         Assert.AreEqual("world", obj.Class1?.String1);
@@ -81,9 +81,9 @@ public sealed class ObjectMergeTests
             String1 = "hello"
         };
 
-        var patch = new JsonMergePatch<Class2>("{\"Class1\": { \"Int1\": 1 }}");
+        var patch = "{\"Class1\": { \"Int1\": 1 }}";
         
-        patch.ApplyTo(ref obj);
+        JsonMergePatcher.ApplyTo(ref obj, patch);
         
         Assert.AreEqual(1, obj.Class1?.Int1);
     }
@@ -93,9 +93,9 @@ public sealed class ObjectMergeTests
     {
         var obj = "hello";
 
-        var patch = new JsonMergePatch<string>("\"world\"");
+        var patch = "\"world\"";
         
-        patch.ApplyTo(ref obj);
+        JsonMergePatcher.ApplyTo(ref obj, patch);
         
         Assert.AreEqual("world", obj);
     }
@@ -105,9 +105,9 @@ public sealed class ObjectMergeTests
     {
         int[] obj = [1, 2];
 
-        var patch = new JsonMergePatch<int[]>("[3, 4]");
+        var patch = "[3, 4]";
         
-        patch.ApplyTo(ref obj);
+        JsonMergePatcher.ApplyTo(ref obj, patch);
         
         Assert.AreEqual(3, obj[0]);
         Assert.AreEqual(4, obj[1]);
@@ -122,9 +122,9 @@ public sealed class ObjectMergeTests
             String1 = "hello"
         };
 
-        var patch = new JsonMergePatch<Class1>("{\"int1\": 1}", JsonSerializerOptions.Web);
+        var patch = "{\"int1\": 1}";
         
-        patch.ApplyTo(ref obj);
+        JsonMergePatcher.ApplyTo(ref obj, patch, JsonSerializerOptions.Web);
         
         Assert.AreEqual(1, obj.Int1);
         Assert.AreEqual("hello", obj.String1);
