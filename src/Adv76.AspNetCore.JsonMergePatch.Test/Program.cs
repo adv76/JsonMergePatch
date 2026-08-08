@@ -27,6 +27,8 @@ var class1 = new Class1()
     NullableString1 = "World",
     RequiredString1 = "Required",
     RequiredString2 = "Required2",
+    ProhibitedString1 = "Prohibited",
+    ReadonlyString1 = "Readonly",
 };
 
 app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();

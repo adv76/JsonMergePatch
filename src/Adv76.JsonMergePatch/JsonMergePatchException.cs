@@ -2,9 +2,9 @@ using System.Runtime.Serialization;
 
 namespace Adv76.JsonMergePatch;
 
-public class JsonMergePatchException : Exception
+public sealed class JsonMergePatchException : Exception
 {
-    protected JsonMergePatchException()
+    private JsonMergePatchException()
     {
     }
 

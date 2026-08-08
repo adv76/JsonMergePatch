@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Text.Json;
 using Adv76.JsonMergePatch;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Json;
@@ -10,27 +9,35 @@ namespace Adv76.AspNetCore.JsonMergePatch;
 
 public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatchDocument<T>>
 {
-    private readonly JsonSerializerOptions? _jsonOptions;
+    private readonly JsonMergeOptions? _mergeOptions;
     private readonly string _jsonBodyString;
     
-    private JsonMergePatchDocument(string jsonBodyString, JsonSerializerOptions? jsonOptions = null)
+    private JsonMergePatchDocument(string jsonBodyString, JsonMergeOptions? mergeOptions = null)
     {
         _jsonBodyString = jsonBodyString;
-        _jsonOptions = jsonOptions;
+        _mergeOptions = mergeOptions;
     }
     
     public void ApplyTo(ref T obj)
     {
-        JsonMergePatcher.ApplyTo(ref obj, _jsonBodyString, _jsonOptions);
+        JsonMergePatcher.ApplyTo(ref obj, _jsonBodyString, _mergeOptions);
     }
     
     public static async ValueTask<JsonMergePatchDocument<T>?> BindAsync(HttpContext context, ParameterInfo parameter)
     {
         var jsonOptions = context.RequestServices.GetService<IOptions<JsonOptions>>();
+        var mergeOptions = context.RequestServices.GetService<IOptions<JsonMergeOptions>>();
 
         using var sr = new StreamReader(context.Request.Body);
         var bodyString = await sr.ReadToEndAsync();
 
-        return new JsonMergePatchDocument<T>(bodyString, jsonOptions?.Value.SerializerOptions);
+        var merge = mergeOptions?.Value ?? JsonMergeOptions.Default;
+
+        if (merge.JsonSerializerOptions is null && jsonOptions is not null)
+        {
+            merge.JsonSerializerOptions = jsonOptions.Value.SerializerOptions;
+        }
+        
+        return new JsonMergePatchDocument<T>(bodyString, merge);
     }
 }

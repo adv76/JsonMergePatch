@@ -53,6 +53,20 @@ public sealed class ObjectMergeTests
         }
     }
     
+    private class Class4()
+    {   
+        [JsonMergePropertySecurity(Policy = JsonMergePropertySecurityPolicy.AllowPatching)]
+        public string? AllowedString { get; set; }
+        
+        [JsonMergePropertySecurity(Policy = JsonMergePropertySecurityPolicy.BlockPatching)]
+        public string? BlockedString { get; set; }
+        
+        [JsonMergePropertySecurity(Policy = JsonMergePropertySecurityPolicy.SkipSilently)]
+        public string? IgnoredString { get; set; }
+        
+        public string? String { get; set; }
+    }
+    
     [TestMethod]
     public void TestMethod1()
     {
@@ -160,7 +174,7 @@ public sealed class ObjectMergeTests
 
         var patch = "{\"int1\": 1}";
         
-        JsonMergePatcher.ApplyTo(ref obj, patch, JsonSerializerOptions.Web);
+        JsonMergePatcher.ApplyTo(ref obj, patch, new JsonMergeOptions() { JsonSerializerOptions = JsonSerializerOptions.Web });
         
         Assert.AreEqual(1, obj.Int1);
         Assert.AreEqual("hello", obj.String1);
@@ -180,5 +194,82 @@ public sealed class ObjectMergeTests
         
         Assert.AreEqual(4, obj.TimeSpan1.Hours);
         Assert.AreEqual(5, obj.TimeSpan1.Minutes);
+    }
+
+    [TestMethod]
+    public void TestAllowPropertyUpdate()
+    {
+        var obj = new Class4()
+        {
+            AllowedString = "Hello"
+        };
+
+        var patch = "{\"AllowedString\": \"World\"}";
+        
+        JsonMergePatcher.ApplyTo(ref obj, patch, JsonMergeOptions.Strict);
+        
+        Assert.AreEqual("World", obj.AllowedString);
+    }
+    
+    [TestMethod]
+    public void TestBlockPropertyUpdate()
+    {
+        var obj = new Class4()
+        {
+            BlockedString = "Hello"
+        };
+
+        var patch = "{\"BlockedString\": \"World\"}";
+
+        Assert.Throws<JsonMergePatchException>(() =>
+        {
+            JsonMergePatcher.ApplyTo(ref obj, patch, JsonMergeOptions.Strict);
+        });
+    }
+    
+    [TestMethod]
+    public void TestSkipPropertyUpdate()
+    {
+        var obj = new Class4()
+        {
+            IgnoredString = "Hello"
+        };
+
+        var patch = "{\"IgnoredString\": \"World\"}";
+        
+        JsonMergePatcher.ApplyTo(ref obj, patch, JsonMergeOptions.Strict);
+        
+        Assert.AreEqual("Hello", obj.IgnoredString);
+    }
+    
+    [TestMethod]
+    public void TestDefaultStrictUpdate()
+    {
+        var obj = new Class4()
+        {
+            String = "Hello"
+        };
+
+        var patch = "{\"String\": \"World\"}";
+        
+        Assert.Throws<JsonMergePatchException>(() =>
+        {
+            JsonMergePatcher.ApplyTo(ref obj, patch, JsonMergeOptions.Strict);
+        });
+    }
+    
+    [TestMethod]
+    public void TestDefaultLooseUpdate()
+    {
+        var obj = new Class4()
+        {
+            String = "Hello"
+        };
+
+        var patch = "{\"String\": \"World\"}";
+        
+        JsonMergePatcher.ApplyTo(ref obj, patch, JsonMergeOptions.Default);
+        
+        Assert.AreEqual("World", obj.String);
     }
 }
