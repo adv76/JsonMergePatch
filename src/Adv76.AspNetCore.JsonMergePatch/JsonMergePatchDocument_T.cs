@@ -23,6 +23,11 @@ public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatch
         JsonMergePatcher.ApplyTo(ref obj, _jsonBodyString, _mergeOptions);
     }
     
+    public JsonMergePatchResult SafeApplyTo(ref T obj)
+    {
+        return JsonMergePatcher.SafeApplyTo(ref obj, _jsonBodyString, _mergeOptions);
+    }
+    
     public static async ValueTask<JsonMergePatchDocument<T>?> BindAsync(HttpContext context, ParameterInfo parameter)
     {
         var jsonOptions = context.RequestServices.GetService<IOptions<JsonOptions>>();

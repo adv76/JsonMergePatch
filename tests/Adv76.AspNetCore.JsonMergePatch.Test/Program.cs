@@ -1,5 +1,6 @@
 using Adv76.AspNetCore.JsonMergePatch;
 using Adv76.AspNetCore.JsonMergePatch.Test;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,6 +49,17 @@ app.MapPatch("/class1", (JsonMergePatchDocument<Class1> doc) =>
     doc.ApplyTo(ref class1);
     
     return class1;
+}).AcceptsJsonMergePatch();
+    
+app.MapPatch("/class1/safe", Results<Ok<Class1>, ValidationProblem>(JsonMergePatchDocument<Class1> doc) =>
+{
+    var result = doc.SafeApplyTo(ref class1);
+    if (result.Succeeded)
+    {
+        return TypedResults.Ok(class1);
+    }
+
+    return TypedResults.ValidationProblem(result);
 }).AcceptsJsonMergePatch();
 
 app.Run();

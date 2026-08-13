@@ -181,7 +181,7 @@ public static partial class JsonMergePatcher
                 return true;
             }
 
-            // attribute.Policy == JsonMergePropertySecurityPolicy.BlockPatching
+            // attribute.Policy == JsonMergePropertySecurityPolicy.SkipSilently
             // or any invalid enum states
             return false;
         }

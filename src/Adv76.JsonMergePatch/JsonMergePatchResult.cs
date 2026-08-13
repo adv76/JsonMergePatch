@@ -17,11 +17,11 @@ public sealed class JsonMergePatchResult
         Errors = errors;
     }
     
-    public static JsonMergePatchResult Success { get; } = new JsonMergePatchResult(true);
+    public static JsonMergePatchResult Success { get; } = new(true);
 
     public static JsonMergePatchResult Fail(string property, string error)
-        => new JsonMergePatchResult(false, new Dictionary<string, string>() { { property, error } });
+        => new(false, new Dictionary<string, string>() { { property, error } });
     
-    public static JsonMergePatchResult Fail(string property, Dictionary<string, string> errors)
-        => new JsonMergePatchResult(false, errors);
+    public static JsonMergePatchResult Fail(Dictionary<string, string> errors)
+        => new(false, errors);
 }
