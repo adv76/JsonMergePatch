@@ -33,14 +33,13 @@ public static partial class JsonMergePatcher
             {
                 var typeInfo = jsonOptions.GetTypeInfo(obj.GetType());
                 
-                ApplyToObject(ref reader, ref obj, typeInfo, mergeOptions, jsonOptions);
+                ApplyToObject(ref reader, ref obj, typeInfo, [], mergeOptions, jsonOptions);
             }
             else
             {
                 var converter = jsonOptions.GetConverter(typeof(T));
 
-                var read = CreateGenericReadDelegate(typeof(T));
-                var value = read(converter, ref reader, typeof(T), jsonOptions);
+                var value = ReadValueWithConverter(ref reader, converter, typeof(T), jsonOptions);
 
                 obj = (T)value!;
             }
@@ -51,7 +50,7 @@ public static partial class JsonMergePatcher
         }
     }
 
-    private static void ApplyToObject<TInner>(ref Utf8JsonReader reader, ref TInner obj, JsonTypeInfo typeInfo, JsonMergeOptions mergeOptions, JsonSerializerOptions jsonOptions)
+    private static void ApplyToObject<TInner>(ref Utf8JsonReader reader, ref TInner obj, JsonTypeInfo typeInfo, string[] path, JsonMergeOptions mergeOptions, JsonSerializerOptions jsonOptions)
     {
         ArgumentNullException.ThrowIfNull(obj);
         
@@ -66,7 +65,11 @@ public static partial class JsonMergePatcher
             }
                 
             var propertyName = reader.GetString();
-                
+            if (propertyName is null)
+            {
+                throw new JsonMergePatchException($"Invalid JSON. Property name is null.");
+            } 
+            
             reader.Read();
                 
             var jsonProperty = typeInfo.Properties.FirstOrDefault(x => x.Name == propertyName);
@@ -98,7 +101,7 @@ public static partial class JsonMergePatcher
                                        $"Object type {jsonProperty.PropertyType.Name} cannot be created.");
                     }
 
-                    ApplyToObject(ref reader, ref existing, propertyObjectTypeInfo, mergeOptions, jsonOptions);
+                    ApplyToObject(ref reader, ref existing, propertyObjectTypeInfo, [..path, propertyName], mergeOptions, jsonOptions);
 
                     jsonProperty.Set(obj, existing);
                 }
@@ -107,15 +110,24 @@ public static partial class JsonMergePatcher
                     var converter = (jsonProperty.CustomConverter ??
                                      jsonOptions.GetConverter(jsonProperty.PropertyType));
 
-                    var value = ReadValueWithConverter(ref reader, converter, jsonProperty.PropertyType, jsonOptions);
-
-                    if (jsonProperty.IsRequired && value is null)
+                    try
                     {
-                        throw new JsonMergePatchException(
-                            $"Property {propertyName} is required and cannot be set to 'null'.");
+                        var value = ReadValueWithConverter(ref reader, converter, jsonProperty.PropertyType, jsonOptions);
+                        
+                        if (jsonProperty.IsRequired && value is null)
+                        {
+                            throw new JsonMergePatchException(
+                                $"Property {GetPropertyPath(path, propertyName)} is required and cannot be set to 'null'.");
+                        }
+                        
+                        jsonProperty.Set(obj, value);
                     }
-
-                    jsonProperty.Set(obj, value);
+                    catch (Exception e)
+                    {
+                        _ = e;
+                        throw;
+                    }
+                    
                 }
             }
             else
@@ -126,6 +138,11 @@ public static partial class JsonMergePatcher
 
             reader.Read();
         }
+    }
+
+    private static string GetPropertyPath(string[] path, string propertyName)
+    {
+        return string.Join('.', [..path, propertyName]);
     }
 
     private static bool UseCustomConverterForObject(JsonPropertyInfo matchingProperty)
@@ -168,8 +185,13 @@ public static partial class JsonMergePatcher
             // or any invalid enum states
             return false;
         }
-        
-        return mergeOptions.SecurityPolicy == JsonMergeSecurityPolicy.AllowByDefault;
+
+        if (mergeOptions.SecurityPolicy == JsonMergeSecurityPolicy.BlockByDefault)
+        {
+            throw new JsonMergePatchException($"Property {propertyInfo.Name} is cannot be patched.");
+        }
+
+        return true;
     }
 
     private static object? ReadValueWithConverter(ref Utf8JsonReader reader, JsonConverter converter, Type propertyType,

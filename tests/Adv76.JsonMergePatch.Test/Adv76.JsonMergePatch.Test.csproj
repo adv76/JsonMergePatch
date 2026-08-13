@@ -16,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Adv76.JsonMergePatch\Adv76.JsonMergePatch.csproj" />
+      <ProjectReference Include="..\..\src\Adv76.JsonMergePatch\Adv76.JsonMergePatch.csproj" />
     </ItemGroup>
 
 </Project>
