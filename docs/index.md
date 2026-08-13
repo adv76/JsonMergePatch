@@ -8,7 +8,7 @@ _layout: landing
 
 ## Why JSON Merge Patch
 
-Sometimes you don't want to push the whole object just to update one property. ASP.NET Core has support for JSON Patch, but JSON patch is a lot more verbose and complicated. JSON merge patch, though a bit limited in some ways, is perfect for when you want to update a single or a couple of values.
+Sometimes you don't want to `PUT` the whole object just to update one property. ASP.NET Core has support for JSON Patch, but JSON patch is a lot more verbose and complicated. JSON merge patch, though a bit limited in some ways, is perfect for when you want to update a single or a couple of values.
 
 Suppose you have this user object:
 
