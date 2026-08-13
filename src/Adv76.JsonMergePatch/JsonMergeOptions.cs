@@ -35,7 +35,7 @@ public sealed class JsonMergeOptions
     /// Strict options preset that requires manual opt-in to merging on
     /// a property-by-property basis.
     /// </summary>
-    public static JsonMergeOptions Strict => new JsonMergeOptions()
+    public static JsonMergeOptions Strict => new()
     {
         SecurityPolicy = JsonMergeSecurityPolicy.BlockByDefault
     };
