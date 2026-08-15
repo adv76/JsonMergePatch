@@ -171,12 +171,12 @@ public static partial class JsonMergePatcher
         var attributes = propertyInfo.AttributeProvider.GetCustomAttributes(typeof(JsonMergePropertySecurityAttribute), true);
         if (attributes.Length > 0 && attributes[^1] is JsonMergePropertySecurityAttribute attribute)
         {
-            if (attribute.Policy == JsonMergePropertySecurityPolicy.BlockPatching)
+            if (attribute.Policy == JsonMergeSecurityPolicy.BlockPatching)
             {
                 throw new JsonMergePatchException($"Property {propertyInfo.Name} is cannot be patched.");
             }
             
-            if (attribute.Policy == JsonMergePropertySecurityPolicy.AllowPatching)
+            if (attribute.Policy == JsonMergeSecurityPolicy.AllowPatching)
             {
                 return true;
             }
@@ -186,7 +186,7 @@ public static partial class JsonMergePatcher
             return false;
         }
 
-        if (mergeOptions.SecurityPolicy == JsonMergeSecurityPolicy.BlockByDefault)
+        if (mergeOptions.SecurityPolicy == JsonMergeSecurityPolicy.BlockPatching)
         {
             throw new JsonMergePatchException($"Property {propertyInfo.Name} is cannot be patched.");
         }

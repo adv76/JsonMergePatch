@@ -1,14 +1,22 @@
 namespace Adv76.JsonMergePatch;
 
+/// <summary>
+/// Security policies for merge patching.
+/// </summary>
 public enum JsonMergeSecurityPolicy
 {
     /// <summary>
-    /// Block all patching unless it is explicitly allowed
+    /// Silently skip patching a property.
     /// </summary>
-    BlockByDefault = 0,
+    SkipSilently = 1,
     
     /// <summary>
-    /// Allow all patching unless it is explicitly forbidden
+    /// Cause the patch to fail if a property is patched.
     /// </summary>
-    AllowByDefault = 1,
+    BlockPatching = 2,
+    
+    /// <summary>
+    /// Allow patching a property.
+    /// </summary>
+    AllowPatching = 3
 }

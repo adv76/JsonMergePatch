@@ -108,9 +108,9 @@ public static partial class JsonMergePatcher
             }
 
             var securityPolicy = IsPropertyPatchable2(jsonProperty, mergeOptions);
-            if (securityPolicy != JsonMergePropertySecurityPolicy.AllowPatching)
+            if (securityPolicy != JsonMergeSecurityPolicy.AllowPatching)
             {
-                if (securityPolicy == JsonMergePropertySecurityPolicy.BlockPatching)
+                if (securityPolicy == JsonMergeSecurityPolicy.BlockPatching)
                 {
                     errors.Add(GetPropertyPath(path, propertyName), $"Patching{GetPropertyPath(path, propertyName)} is prohibited.");
                 }
@@ -175,11 +175,11 @@ public static partial class JsonMergePatcher
         }
     }
     
-    private static JsonMergePropertySecurityPolicy IsPropertyPatchable2(JsonPropertyInfo propertyInfo, JsonMergeOptions mergeOptions)
+    private static JsonMergeSecurityPolicy IsPropertyPatchable2(JsonPropertyInfo propertyInfo, JsonMergeOptions mergeOptions)
     {
         if (propertyInfo.AttributeProvider is null)
         {
-            return JsonMergePropertySecurityPolicy.SkipSilently;
+            return mergeOptions.SecurityPolicy;
         }
         
         var attributes = propertyInfo.AttributeProvider.GetCustomAttributes(typeof(JsonMergePropertySecurityAttribute), true);
@@ -187,9 +187,7 @@ public static partial class JsonMergePatcher
         {
             return attribute.Policy;
         }
-        
-        return mergeOptions.SecurityPolicy == JsonMergeSecurityPolicy.BlockByDefault 
-            ? JsonMergePropertySecurityPolicy.BlockPatching 
-            : JsonMergePropertySecurityPolicy.AllowPatching;
+
+        return mergeOptions.SecurityPolicy;
     }
 }

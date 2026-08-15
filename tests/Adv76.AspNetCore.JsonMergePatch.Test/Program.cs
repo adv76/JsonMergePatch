@@ -37,6 +37,7 @@ var class1 = new Class1()
         String1 = "Hello",
         NullableString1 = "World",
         RequiredString1 = "Required",
+        ProhibitedString1 = "Prohibited"
     }
 };
 
@@ -60,6 +61,6 @@ app.MapPatch("/class1/safe", Results<Ok<Class1>, ValidationProblem>(JsonMergePat
     }
 
     return TypedResults.ValidationProblem(result);
-}).AcceptsJsonMergePatch();
+}).AcceptsTypedJsonMergePatch<Class1>();
 
 app.Run();

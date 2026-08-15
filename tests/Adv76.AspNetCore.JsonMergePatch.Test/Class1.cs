@@ -13,9 +13,9 @@ public class Class1
     public required string RequiredString1 { get; set; }
     [JsonRequired]
     public string? RequiredString2 { get; set; }
-    [JsonMergePropertySecurity(Policy = JsonMergePropertySecurityPolicy.BlockPatching)]
+    [JsonMergePropertySecurity(Policy = JsonMergeSecurityPolicy.BlockPatching)]
     public string? ProhibitedString1 { get; set; }
-    [JsonMergePropertySecurity(Policy = JsonMergePropertySecurityPolicy.SkipSilently)]
+    [JsonMergePropertySecurity(Policy = JsonMergeSecurityPolicy.SkipSilently)]
     public string? ReadonlyString1 { get; set; }
 
     public Class2? Class2 { get; set; } = null;

@@ -8,18 +8,18 @@ namespace Adv76.JsonMergePatch;
 public sealed class JsonMergeOptions
 {
     /// <summary>
-    /// The default security policy for updating properties
+    /// The default security policy for updating properties.
     /// </summary>
     /// <remarks>
     /// Any individual property configurations will supersede this. This policy only applies
     /// to properties not annotated with <see cref="JsonMergePropertySecurityAttribute"/>.
     /// 
-    /// Defaults to <see cref="JsonMergeSecurityPolicy.AllowByDefault"/>.
+    /// Defaults to <see cref="JsonMergeSecurityPolicy.AllowPatching"/>.
     /// </remarks>
-    public JsonMergeSecurityPolicy SecurityPolicy { get; set; } = JsonMergeSecurityPolicy.AllowByDefault;
+    public JsonMergeSecurityPolicy SecurityPolicy { get; set; } = JsonMergeSecurityPolicy.AllowPatching;
     
     /// <summary>
-    /// The serializer options to use for the deserialization and merging operations
+    /// The serializer options to use for the deserialization and merging operations.
     /// </summary>
     /// <remarks>
     /// The patcher defaults to <see cref="JsonSerializerOptions.Default"/> if not set.
@@ -27,7 +27,7 @@ public sealed class JsonMergeOptions
     public JsonSerializerOptions? JsonSerializerOptions { get; set; }
 
     /// <summary>
-    /// The default options
+    /// The default options.
     /// </summary>
     public static JsonMergeOptions Default => new();
     
@@ -37,6 +37,6 @@ public sealed class JsonMergeOptions
     /// </summary>
     public static JsonMergeOptions Strict => new()
     {
-        SecurityPolicy = JsonMergeSecurityPolicy.BlockByDefault
+        SecurityPolicy = JsonMergeSecurityPolicy.BlockPatching
     };
 }

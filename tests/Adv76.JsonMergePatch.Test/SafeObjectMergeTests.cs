@@ -54,13 +54,13 @@ public sealed class SafeObjectMergeTests
     
     private class Class4()
     {   
-        [JsonMergePropertySecurity(Policy = JsonMergePropertySecurityPolicy.AllowPatching)]
+        [JsonMergePropertySecurity(Policy = JsonMergeSecurityPolicy.AllowPatching)]
         public string? AllowedString { get; set; }
         
-        [JsonMergePropertySecurity(Policy = JsonMergePropertySecurityPolicy.BlockPatching)]
+        [JsonMergePropertySecurity(Policy = JsonMergeSecurityPolicy.BlockPatching)]
         public string? BlockedString { get; set; }
         
-        [JsonMergePropertySecurity(Policy = JsonMergePropertySecurityPolicy.SkipSilently)]
+        [JsonMergePropertySecurity(Policy = JsonMergeSecurityPolicy.SkipSilently)]
         public string? IgnoredString { get; set; }
         
         public string? String { get; set; }
