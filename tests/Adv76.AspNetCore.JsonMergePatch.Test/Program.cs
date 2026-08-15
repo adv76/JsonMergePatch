@@ -52,7 +52,7 @@ app.MapPatch("/class1", (JsonMergePatchDocument<Class1> doc) =>
     return class1;
 }).AcceptsJsonMergePatch();
     
-app.MapPatch("/class1/safe", Results<Ok<Class1>, ValidationProblem>(JsonMergePatchDocument<Class1> doc) =>
+app.MapPatch("/class1/safe", Results<Ok<Class1>, ValidationProblem>(TypedJsonMergePatchDocument<Class1> doc) =>
 {
     var result = doc.SafeApplyTo(ref class1);
     if (result.Succeeded)
@@ -61,6 +61,6 @@ app.MapPatch("/class1/safe", Results<Ok<Class1>, ValidationProblem>(JsonMergePat
     }
 
     return TypedResults.ValidationProblem(result);
-}).AcceptsJsonMergePatch();
+});//.AcceptsTypedJsonMergePatch<Class1>();
 
 app.Run();

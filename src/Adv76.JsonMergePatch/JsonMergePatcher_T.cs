@@ -71,7 +71,7 @@ public static partial class JsonMergePatcher
             } 
             
             reader.Read();
-                
+            
             var jsonProperty = typeInfo.Properties.FirstOrDefault(x => x.Name == propertyName);
             if (jsonProperty is null)
             {

@@ -66,6 +66,11 @@ public sealed class ObjectMergeTests
         
         public string? String { get; set; }
     }
+
+    private class Class5()
+    {
+        public Dictionary<string, int> Dictionary1 { get; set; } = [];
+    }
     
     [TestMethod]
     public void TestMethod1()
@@ -271,5 +276,25 @@ public sealed class ObjectMergeTests
         JsonMergePatcher.ApplyTo(ref obj, patch, JsonMergeOptions.Default);
         
         Assert.AreEqual("World", obj.String);
+    }
+    
+    [TestMethod]
+    public void SimpleDictionaryTest()
+    {
+        var obj = new Class5()
+        {
+            Dictionary1 =
+            {
+                ["hello"] = 1,
+                ["world"] = 2
+            }
+        };
+
+        var patch = "{\"Dictionary1\": {\"hello\": 5}}";
+        
+        JsonMergePatcher.ApplyTo(ref obj, patch);
+        
+        Assert.AreEqual(5, obj.Dictionary1["hello"]);
+        Assert.AreEqual(2, obj.Dictionary1["world"]);
     }
 }

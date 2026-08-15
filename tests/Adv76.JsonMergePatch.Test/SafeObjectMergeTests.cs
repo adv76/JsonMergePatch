@@ -66,6 +66,11 @@ public sealed class SafeObjectMergeTests
         public string? String { get; set; }
     }
     
+    private class Class5()
+    {
+        public Dictionary<string, int> Dictionary1 { get; set; } = [];
+    }
+    
     [TestMethod]
     public void TestMethod1()
     {
@@ -328,5 +333,27 @@ public sealed class SafeObjectMergeTests
         
         Assert.AreEqual(3, obj.Int1);
         Assert.AreEqual("hello", obj.String1);
+    }
+    
+    [TestMethod]
+    public void SimpleDictionaryTest()
+    {
+        var obj = new Class5()
+        {
+            Dictionary1 =
+            {
+                ["hello"] = 1,
+                ["world"] = 2
+            }
+        };
+
+        var patch = "{\"Dictionary1\": {\"hello\": 5}}";
+        
+        var result = JsonMergePatcher.SafeApplyTo(ref obj, patch);
+
+        Assert.IsTrue(result.Succeeded);
+        
+        Assert.AreEqual(5, obj.Dictionary1["hello"]);
+        Assert.AreEqual(2, obj.Dictionary1["world"]);
     }
 }

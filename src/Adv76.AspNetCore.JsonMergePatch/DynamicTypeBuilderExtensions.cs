@@ -62,12 +62,27 @@ internal static class DynamicTypeBuilderExtensions
             return;
         }
         
+        var propertyType =  property.PropertyType;
+        
+        var typeInfo = jsonSerializerOptions.GetTypeInfo(property.PropertyType);
+        if (typeInfo.Kind == JsonTypeInfoKind.Object)
+        {
+            propertyType = typeInfo.BuildPatchType(mergeOptions, jsonSerializerOptions);
+        }
+
+        if (property.PropertyType.IsValueType && !(property.PropertyType.IsGenericType &&
+                                                   property.PropertyType.GetGenericTypeDefinition() ==
+                                                   typeof(Nullable<>)))
+        {
+            propertyType = typeof(Nullable<>).MakeGenericType(propertyType);
+        }
+        
         FieldBuilder fb = tb.DefineField(
             "f_" + property.Name,
-            typeof(int),
+            propertyType,
             FieldAttributes.Private);
 
-        PropertyBuilder pb = tb.DefineProperty(property.Name, PropertyAttributes.None, property.PropertyType, null);
+        PropertyBuilder pb = tb.DefineProperty(property.Name, PropertyAttributes.None, propertyType, null);
 
         // The property "set" and property "get" methods require a special
         // set of attributes.
@@ -97,7 +112,7 @@ internal static class DynamicTypeBuilderExtensions
             "set_Number",
             getSetAttr,
             null,
-            new Type[] { property.PropertyType });
+            new Type[] { propertyType });
 
         ILGenerator numberSetIL = mbNumberSetAccessor.GetILGenerator();
         // Load the instance and then the numeric argument, then store the

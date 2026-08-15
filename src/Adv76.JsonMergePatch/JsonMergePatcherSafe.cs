@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -85,93 +86,127 @@ public static partial class JsonMergePatcher
             } 
             
             reader.Read();
-                
-            var jsonProperty = typeInfo.Properties.FirstOrDefault(x => x.Name == propertyName);
-            if (jsonProperty is null)
+
+            if (typeInfo.Kind == JsonTypeInfoKind.Object)
             {
-                errors.Add("~", $"Property {GetPropertyPath(path, propertyName)} not found.");
-                
-                reader.Skip();
-                reader.Read();
 
-                continue;
-            }
-
-            if (jsonProperty.Set is null)
-            {
-                errors.Add(GetPropertyPath(path, propertyName), $"Property {GetPropertyPath(path, propertyName)} has no setter.");
-                
-                reader.Skip();
-                reader.Read();
-
-                continue;
-            }
-
-            var securityPolicy = IsPropertyPatchable2(jsonProperty, mergeOptions);
-            if (securityPolicy != JsonMergeSecurityPolicy.AllowPatching)
-            {
-                if (securityPolicy == JsonMergeSecurityPolicy.BlockPatching)
+                var jsonProperty = typeInfo.Properties.FirstOrDefault(x => x.Name == propertyName);
+                if (jsonProperty is null)
                 {
-                    errors.Add(GetPropertyPath(path, propertyName), $"Patching{GetPropertyPath(path, propertyName)} is prohibited.");
+                    errors.Add("~", $"Property {GetPropertyPath(path, propertyName)} not found.");
+
+                    reader.Skip();
+                    reader.Read();
+
+                    continue;
                 }
-                
-                reader.Skip();
-                reader.Read();
 
-                continue;
-            }
-            
-            if (reader.TokenType == JsonTokenType.StartObject && !UseCustomConverterForObject(jsonProperty))
-            {
-                var propertyObjectTypeInfo = jsonOptions.GetTypeInfo(jsonProperty.PropertyType);
-
-                var existing = jsonProperty.Get?.Invoke(obj);
-
-                if (existing is null)
+                if (jsonProperty.Set is null)
                 {
-                    var newValue = propertyObjectTypeInfo.CreateObject?.Invoke();
+                    errors.Add(GetPropertyPath(path, propertyName),
+                        $"Property {GetPropertyPath(path, propertyName)} has no setter.");
 
-                    if (newValue is null)
+                    reader.Skip();
+                    reader.Read();
+
+                    continue;
+                }
+
+                var securityPolicy = IsPropertyPatchable2(jsonProperty, mergeOptions);
+                if (securityPolicy != JsonMergeSecurityPolicy.AllowPatching)
+                {
+                    if (securityPolicy == JsonMergeSecurityPolicy.BlockPatching)
                     {
-                        errors.Add(GetPropertyPath(path, propertyName), $"Property {GetPropertyPath(path, propertyName)} is null and cannot be created.");
-                        
-                        reader.Skip();
-                        reader.Read();
-
-                        continue;
+                        errors.Add(GetPropertyPath(path, propertyName),
+                            $"Patching{GetPropertyPath(path, propertyName)} is prohibited.");
                     }
 
-                    existing = newValue;
+                    reader.Skip();
+                    reader.Read();
+
+                    continue;
                 }
 
-                SafeApplyToObject(ref reader, ref existing, ref errors, ref ops, propertyObjectTypeInfo, [..path, propertyName], mergeOptions, jsonOptions);
+                if (reader.TokenType == JsonTokenType.StartObject && !UseCustomConverterForObject(jsonProperty))
+                {
+                    var propertyObjectTypeInfo = jsonOptions.GetTypeInfo(jsonProperty.PropertyType);
 
-                ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, existing), obj));
-            }
-            else
+                    var existing = jsonProperty.Get?.Invoke(obj);
+
+                    if (existing is null)
+                    {
+                        var newValue = propertyObjectTypeInfo.CreateObject?.Invoke();
+
+                        if (newValue is null)
+                        {
+                            errors.Add(GetPropertyPath(path, propertyName),
+                                $"Property {GetPropertyPath(path, propertyName)} is null and cannot be created.");
+
+                            reader.Skip();
+                            reader.Read();
+
+                            continue;
+                        }
+
+                        existing = newValue;
+                    }
+
+                    SafeApplyToObject(ref reader, ref existing, ref errors, ref ops, propertyObjectTypeInfo,
+                        [..path, propertyName], mergeOptions, jsonOptions);
+
+                    ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, existing), obj));
+                }
+                else
+                {
+                    var converter = (jsonProperty.CustomConverter ??
+                                     jsonOptions.GetConverter(jsonProperty.PropertyType));
+
+                    try
+                    {
+                        var value = ReadValueWithConverter(ref reader, converter, jsonProperty.PropertyType,
+                            jsonOptions);
+
+                        if (jsonProperty.IsRequired && value is null)
+                        {
+                            errors.Add(GetPropertyPath(path, propertyName),
+                                $"Property {GetPropertyPath(path, propertyName)} is required and cannot be set to 'null'.");
+                        }
+
+                        ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, value), obj));
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(GetPropertyPath(path, propertyName),
+                            $"Invalid value for this property. {e.Message}");
+                    }
+                }
+
+                reader.Read();
+            } 
+            else if (typeInfo.Kind == JsonTypeInfoKind.Dictionary)
             {
-                var converter = (jsonProperty.CustomConverter ??
-                                 jsonOptions.GetConverter(jsonProperty.PropertyType));
+                // TODO double check
+                var converter = jsonOptions.GetConverter(typeInfo.ElementType!);
 
                 try
                 {
-                    var value = ReadValueWithConverter(ref reader, converter, jsonProperty.PropertyType, jsonOptions);
-
-                    if (jsonProperty.IsRequired && value is null)
-                    {
-                        errors.Add(GetPropertyPath(path, propertyName),
-                            $"Property {GetPropertyPath(path, propertyName)} is required and cannot be set to 'null'.");
-                    }
-
-                    ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, value), obj));
+                    var value = ReadValueWithConverter(ref reader, converter, typeInfo.ElementType!,
+                        jsonOptions);
+                    
+                    ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[propertyName] = value, obj));
                 }
                 catch (Exception e)
                 {
-                    errors.Add(GetPropertyPath(path, propertyName), $"Invalid value for this property. {e.Message}");
+                    errors.Add(GetPropertyPath(path, propertyName),
+                        $"Invalid value for this property. {e.Message}");
                 }
+                
+                reader.Read();
             }
-
-            reader.Read();
+            else
+            {
+                throw new NotImplementedException($"Type info kind {typeInfo.Kind} not implemented.");
+            }
         }
     }
     
