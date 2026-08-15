@@ -58,7 +58,7 @@ public class BasicBenchmarks
             "Int0": 42,
             "String1": "Sphinx of black quartz, judge my vow.",
             "Double2": 987.654
-        }                    
+        }
         """);
 
         return _object0;

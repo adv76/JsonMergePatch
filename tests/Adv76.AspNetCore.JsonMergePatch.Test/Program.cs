@@ -61,6 +61,6 @@ app.MapPatch("/class1/safe", Results<Ok<Class1>, ValidationProblem>(JsonMergePat
     }
 
     return TypedResults.ValidationProblem(result);
-}).AcceptsTypedJsonMergePatch<Class1>();
+}).AcceptsJsonMergePatch();
 
 app.Run();
