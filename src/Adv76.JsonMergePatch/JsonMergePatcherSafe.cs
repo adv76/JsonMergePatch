@@ -7,6 +7,24 @@ namespace Adv76.JsonMergePatch;
 
 public static partial class JsonMergePatcher
 {
+    public static void ApplyTo<T>(ref T obj, byte[] patchBytes, JsonMergeOptions? mergeOptions = null)
+    {
+        var result = SafeApplyTo<T>(ref obj, patchBytes, mergeOptions);
+        if (!result.Succeeded)
+        {
+            throw new JsonMergePatchException("Invalid JSON patch document.");
+        }
+    }
+    
+    public static void ApplyTo<T>(ref T obj, string patchString, JsonMergeOptions? mergeOptions = null)
+    {
+        var result = SafeApplyTo<T>(ref obj, patchString, mergeOptions);
+        if (!result.Succeeded)
+        {
+            throw new JsonMergePatchException("Invalid JSON patch document.");
+        }
+    }
+    
     public static JsonMergePatchResult SafeApplyTo<T>(ref T obj, string patchString, JsonMergeOptions? mergeOptions = null)
     {
         var patchBytes = Encoding.UTF8.GetBytes(patchString);
@@ -74,22 +92,21 @@ public static partial class JsonMergePatcher
         // Read until there are no more properties left
         while (reader.TokenType != JsonTokenType.EndObject)
         {
-            if (reader.TokenType != JsonTokenType.PropertyName)
-            {
-                throw new JsonMergePatchException("Invalid JSON. Expected property name.");
-            }
-                
-            var propertyName = reader.GetString();
-            if (propertyName is null)
-            {
-                throw new JsonMergePatchException($"Invalid JSON. Property name is null.");
-            } 
-            
-            reader.Read();
-
             if (typeInfo.Kind == JsonTypeInfoKind.Object)
             {
-
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    throw new JsonMergePatchException("Invalid JSON. Expected property name.");
+                }
+                
+                var propertyName = reader.GetString();
+                if (propertyName is null)
+                {
+                    throw new JsonMergePatchException($"Invalid JSON. Property name is null.");
+                } 
+            
+                reader.Read();
+                
                 var jsonProperty = typeInfo.Properties.FirstOrDefault(x => x.Name == propertyName);
                 if (jsonProperty is null)
                 {
@@ -127,34 +144,65 @@ public static partial class JsonMergePatcher
                     continue;
                 }
 
-                if (reader.TokenType == JsonTokenType.StartObject && !UseCustomConverterForObject(jsonProperty))
+                if (reader.TokenType == JsonTokenType.StartObject)
                 {
                     var propertyObjectTypeInfo = jsonOptions.GetTypeInfo(jsonProperty.PropertyType);
-
-                    var existing = jsonProperty.Get?.Invoke(obj);
-
-                    if (existing is null)
+                    if (propertyObjectTypeInfo.Kind == JsonTypeInfoKind.Object)
                     {
-                        var newValue = propertyObjectTypeInfo.CreateObject?.Invoke();
+                        var existing = jsonProperty.Get?.Invoke(obj);
 
-                        if (newValue is null)
+                        if (existing is null)
                         {
-                            errors.Add(GetPropertyPath(path, propertyName),
-                                $"Property {GetPropertyPath(path, propertyName)} is null and cannot be created.");
+                            var newValue = propertyObjectTypeInfo.CreateObject?.Invoke();
 
-                            reader.Skip();
-                            reader.Read();
+                            if (newValue is null)
+                            {
+                                errors.Add(GetPropertyPath(path, propertyName),
+                                    $"Property {GetPropertyPath(path, propertyName)} is null and cannot be created.");
 
-                            continue;
+                                reader.Skip();
+                                reader.Read();
+
+                                continue;
+                            }
+
+                            existing = newValue;
                         }
 
-                        existing = newValue;
+                        SafeApplyToObject(ref reader, ref existing, ref errors, ref ops, propertyObjectTypeInfo,
+                            [..path, propertyName], mergeOptions, jsonOptions);
+
+                        ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, existing), obj));
                     }
+                    else if (propertyObjectTypeInfo.Kind == JsonTypeInfoKind.None) // Custom converter
+                    {
+                        var converter = (jsonProperty.CustomConverter ??
+                                         jsonOptions.GetConverter(jsonProperty.PropertyType));
 
-                    SafeApplyToObject(ref reader, ref existing, ref errors, ref ops, propertyObjectTypeInfo,
-                        [..path, propertyName], mergeOptions, jsonOptions);
+                        try
+                        {
+                            var value = ReadValueWithConverter(ref reader, converter, jsonProperty.PropertyType,
+                                jsonOptions);
 
-                    ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, existing), obj));
+                            if (jsonProperty.IsRequired && value is null)
+                            {
+                                errors.Add(GetPropertyPath(path, propertyName),
+                                    $"Property {GetPropertyPath(path, propertyName)} is required and cannot be set to 'null'.");
+                            }
+
+                            ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, value), obj));
+                        }
+                        catch (Exception e)
+                        {
+                            errors.Add(GetPropertyPath(path, propertyName),
+                                $"Invalid value for this property. {e.Message}");
+                        }
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"JsonTypeInfoKind '{propertyObjectTypeInfo.Kind}' is not valid.'");
+                    }
                 }
                 else
                 {
@@ -185,23 +233,59 @@ public static partial class JsonMergePatcher
             } 
             else if (typeInfo.Kind == JsonTypeInfoKind.Dictionary)
             {
-                // TODO double check
-                var converter = jsonOptions.GetConverter(typeInfo.ElementType!);
+                if (typeInfo.KeyType is null)
+                {
+                    throw new InvalidOperationException("TypeInfo.KeyType is null on a dictionary.");
+                }
+                
+                if (typeInfo.ElementType is null)
+                {
+                    throw new InvalidOperationException("TypeInfo.ElementType is null on a dictionary.");
+                }
+                
+                var keyConverter = jsonOptions.GetConverter(typeInfo.KeyType);
 
+                object? key = null;
+                
                 try
                 {
-                    var value = ReadValueWithConverter(ref reader, converter, typeInfo.ElementType!,
+                    key = ReadValueWithConverter(ref reader, keyConverter, typeInfo.KeyType,
                         jsonOptions);
                     
-                    ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[propertyName] = value, obj));
                 }
                 catch (Exception e)
                 {
-                    errors.Add(GetPropertyPath(path, propertyName),
-                        $"Invalid value for this property. {e.Message}");
+                    errors.Add(GetPropertyPath(path),
+                        $"Invalid key value in this dictionary. {e.Message}");
+                }
+
+                if (key is not null)
+                {
+                    var elementConverter = jsonOptions.GetConverter(typeInfo.ElementType);
+
+                    try
+                    {
+                        var value = ReadValueWithConverter(ref reader, elementConverter, typeInfo.ElementType,
+                            jsonOptions);
+
+                        ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[key] = value, obj));
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(GetPropertyPath(path, $"[{key}]"),
+                            $"Invalid value for this property. {e.Message}");
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Dictionary key cannot be null.");
                 }
                 
                 reader.Read();
+            }
+            else if (typeInfo.Kind == JsonTypeInfoKind.Enumerable)
+            {
+                
             }
             else
             {

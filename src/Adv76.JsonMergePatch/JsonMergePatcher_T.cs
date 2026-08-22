@@ -8,47 +8,47 @@ namespace Adv76.JsonMergePatch;
 
 public static partial class JsonMergePatcher
 {
-    public static void ApplyTo<T>(ref T obj, string patchString, JsonMergeOptions? mergeOptions = null)
-    {
-        var patchBytes = Encoding.UTF8.GetBytes(patchString);
-        
-        ApplyTo(ref obj, patchBytes, mergeOptions);
-    }
+    // public static void ApplyTo<T>(ref T obj, string patchString, JsonMergeOptions? mergeOptions = null)
+    // {
+    //     var patchBytes = Encoding.UTF8.GetBytes(patchString);
+    //     
+    //     ApplyTo(ref obj, patchBytes, mergeOptions);
+    // }
     
-    public static void ApplyTo<T>(ref T obj, byte[] patchBytes, JsonMergeOptions? mergeOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(obj);
-        ArgumentNullException.ThrowIfNull(patchBytes);
-
-        mergeOptions ??= JsonMergeOptions.Default;
-        
-        var jsonOptions = mergeOptions.JsonSerializerOptions ?? JsonSerializerOptions.Default;
-        
-        var reader = new Utf8JsonReader(patchBytes);
-
-        try
-        {
-            reader.Read();
-            if (reader.TokenType == JsonTokenType.StartObject)
-            {
-                var typeInfo = jsonOptions.GetTypeInfo(obj.GetType());
-                
-                ApplyToObject(ref reader, ref obj, typeInfo, [], mergeOptions, jsonOptions);
-            }
-            else
-            {
-                var converter = jsonOptions.GetConverter(typeof(T));
-
-                var value = ReadValueWithConverter(ref reader, converter, typeof(T), jsonOptions);
-
-                obj = (T)value!;
-            }
-        }
-        catch (Exception e) when (e is not OperationCanceledException or JsonMergePatchException)
-        {
-            throw new JsonMergePatchException("Json Merge Patch failed to apply.", e);
-        }
-    }
+    // public static void ApplyTo<T>(ref T obj, byte[] patchBytes, JsonMergeOptions? mergeOptions = null)
+    // {
+    //     ArgumentNullException.ThrowIfNull(obj);
+    //     ArgumentNullException.ThrowIfNull(patchBytes);
+    //
+    //     mergeOptions ??= JsonMergeOptions.Default;
+    //     
+    //     var jsonOptions = mergeOptions.JsonSerializerOptions ?? JsonSerializerOptions.Default;
+    //     
+    //     var reader = new Utf8JsonReader(patchBytes);
+    //
+    //     try
+    //     {
+    //         reader.Read();
+    //         if (reader.TokenType == JsonTokenType.StartObject)
+    //         {
+    //             var typeInfo = jsonOptions.GetTypeInfo(obj.GetType());
+    //             
+    //             ApplyToObject(ref reader, ref obj, typeInfo, [], mergeOptions, jsonOptions);
+    //         }
+    //         else
+    //         {
+    //             var converter = jsonOptions.GetConverter(typeof(T));
+    //
+    //             var value = ReadValueWithConverter(ref reader, converter, typeof(T), jsonOptions);
+    //
+    //             obj = (T)value!;
+    //         }
+    //     }
+    //     catch (Exception e) when (e is not OperationCanceledException or JsonMergePatchException)
+    //     {
+    //         throw new JsonMergePatchException("Json Merge Patch failed to apply.", e);
+    //     }
+    // }
 
     private static void ApplyToObject<TInner>(ref Utf8JsonReader reader, ref TInner obj, JsonTypeInfo typeInfo, string[] path, JsonMergeOptions mergeOptions, JsonSerializerOptions jsonOptions)
     {
@@ -145,6 +145,11 @@ public static partial class JsonMergePatcher
         return string.Join('.', [..path, propertyName]);
     }
 
+    private static string GetPropertyPath(string[] path)
+    {
+        return string.Join('.', path);
+    }
+    
     private static bool UseCustomConverterForObject(JsonPropertyInfo matchingProperty)
     {
         if (matchingProperty.AttributeProvider is null)

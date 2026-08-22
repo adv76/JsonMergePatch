@@ -69,6 +69,12 @@ public sealed class SafeObjectMergeTests
     private class Class5()
     {
         public Dictionary<string, int> Dictionary1 { get; set; } = [];
+        public Dictionary<int, int> Dictionary2 { get; set; } = [];
+    }
+    
+    private class Class6()
+    {
+        public Dictionary<string, Class1> Dictionary1 { get; set; } = [];
     }
     
     [TestMethod]
@@ -355,5 +361,56 @@ public sealed class SafeObjectMergeTests
         
         Assert.AreEqual(5, obj.Dictionary1["hello"]);
         Assert.AreEqual(2, obj.Dictionary1["world"]);
+    }
+    
+    [TestMethod]
+    public void IntDictionaryTest()
+    {
+        var obj = new Class5()
+        {
+            Dictionary2 =
+            {
+                [1] = 12,
+                [2] = 9
+            }
+        };
+
+        var patch = "{\"Dictionary2\": {2: 42}}";
+        
+        var result = JsonMergePatcher.SafeApplyTo(ref obj, patch);
+
+        Assert.IsTrue(result.Succeeded);
+        
+        Assert.AreEqual(12, obj.Dictionary2[1]);
+        Assert.AreEqual(42, obj.Dictionary2[2]);
+    }
+    
+    [TestMethod]
+    public void ObjectDictionaryTest()
+    {
+        var obj = new Class6()
+        {
+            Dictionary1 =
+            {
+                ["hello"] = new Class1()
+                {
+                    Int1 = 3,
+                    String1 = "hello"
+                },
+                ["world"] = new Class1()
+                {
+                    Int1 = 4,
+                    String1 = "world"
+                }
+            }
+        };
+
+        var patch = "{\"Dictionary1\": {\"hello\": {\"Int1\":8}}}";
+        
+        var result = JsonMergePatcher.SafeApplyTo(ref obj, patch);
+
+        Assert.IsTrue(result.Succeeded);
+        
+        Assert.AreEqual(8, obj.Dictionary1["hello"].Int1);
     }
 }
