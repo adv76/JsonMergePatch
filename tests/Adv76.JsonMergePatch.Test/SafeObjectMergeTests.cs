@@ -375,7 +375,7 @@ public sealed class SafeObjectMergeTests
             }
         };
 
-        var patch = "{\"Dictionary2\": {2: 42}}";
+        var patch = "{\"Dictionary2\": {\"2\": 42}}";
         
         var result = JsonMergePatcher.SafeApplyTo(ref obj, patch);
 

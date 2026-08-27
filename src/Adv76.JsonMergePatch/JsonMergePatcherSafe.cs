@@ -37,6 +37,8 @@ public static partial class JsonMergePatcher
     public static JsonMergePatchResult SafeApplyTo<T>(ref T obj, byte[] patchBytes,
         JsonMergeOptions? mergeOptions = null)
     {
+        return SafeApplyTo2(ref obj, patchBytes, mergeOptions);
+        
         ArgumentNullException.ThrowIfNull(obj);
         ArgumentNullException.ThrowIfNull(patchBytes);
 
@@ -105,6 +107,7 @@ public static partial class JsonMergePatcher
         var typeInfo = jsonOptions.GetTypeInfo(obj.GetType());
         if (typeInfo.Kind is JsonTypeInfoKind.Object)
         {
+            SafeApplyToObject2(ref reader, ref obj, ref errors, ref ops, typeInfo, [], mergeOptions, jsonOptions);
         }
         else if (typeInfo.Kind is JsonTypeInfoKind.Dictionary)
         {
@@ -148,6 +151,8 @@ public static partial class JsonMergePatcher
         string[] path, JsonMergeOptions mergeOptions, JsonSerializerOptions jsonOptions)
     {
         ArgumentNullException.ThrowIfNull(dictionary);
+
+        reader.Read();
         
         if (typeInfo.KeyType is null)
         {
@@ -183,18 +188,76 @@ public static partial class JsonMergePatcher
 
             reader.Read();
             
-            // TODO fix
-            try
+            var elementTypeInfo = jsonOptions.GetTypeInfo(typeInfo.ElementType);
+            if (elementTypeInfo.Kind is JsonTypeInfoKind.Object)
             {
-                var value = ReadValueWithConverter(ref reader, elementConverter, typeInfo.ElementType,
-                    jsonOptions);
+                var existing = ((IDictionary)dictionary).Contains(key) ? ((IDictionary)dictionary)[key] : null;
 
-                ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[key] = value, dictionary));
+                if (existing is null)
+                {
+                    var newValue = elementTypeInfo.CreateObject?.Invoke();
+
+                    if (newValue is null)
+                    {
+                        errors.Add(GetPropertyPath(path, key.ToString()),
+                            $"Property {GetPropertyPath(path, key.ToString())} is null and cannot be created.");
+
+                        reader.Skip();
+                        reader.Read();
+
+                        continue;
+                    }
+
+                    existing = newValue;
+                }
+                
+                SafeApplyToObject2(ref reader, ref existing, ref errors, ref ops, elementTypeInfo, [], mergeOptions, jsonOptions);
+                
+                ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[key] = existing, dictionary));
+
             }
-            catch (Exception e)
+            else if (elementTypeInfo.Kind is JsonTypeInfoKind.Dictionary)
             {
-                errors.Add(GetPropertyPath(path, $"[{key}]"),
-                    $"Invalid value for this property. {e.Message}");
+                var existing = ((IDictionary)dictionary).Contains(key) ? ((IDictionary)dictionary)[key] : null;
+
+                if (existing is null)
+                {
+                    var newValue = elementTypeInfo.CreateObject?.Invoke();
+
+                    if (newValue is null)
+                    {
+                        errors.Add(GetPropertyPath(path, key.ToString()),
+                            $"Property {GetPropertyPath(path, key.ToString())} is null and cannot be created.");
+
+                        reader.Skip();
+                        reader.Read();
+
+                        continue;
+                    }
+
+                    existing = newValue;
+                }
+                
+                SafeApplyToDictionary(ref reader, ref existing, ref errors, ref ops, elementTypeInfo, [], mergeOptions, jsonOptions);
+                
+                ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[key] = existing, dictionary));
+            }
+            else if (elementTypeInfo.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.None)
+            {
+                try
+                {
+                    var value = ReadValueWithConverter(ref reader, elementConverter, typeInfo.ElementType, jsonOptions);
+
+                    ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[key] = value, dictionary));
+                }
+                catch (Exception e)
+                {
+                    errors.Add("~", $"Invalid value for this property. {e.Message}");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"JsonTypeInfoKind {typeInfo.Kind} is not allowed.");
             }
             
             reader.Read();
@@ -206,6 +269,8 @@ public static partial class JsonMergePatcher
         string[] path, JsonMergeOptions mergeOptions, JsonSerializerOptions jsonOptions)
     {
         ArgumentNullException.ThrowIfNull(obj);
+
+        reader.Read();
         
         while (reader.TokenType is not JsonTokenType.EndObject)
         {
@@ -259,8 +324,36 @@ public static partial class JsonMergePatcher
             
             reader.Read();
 
-            // Handle value
-            
+            var propertyTypeInfo = jsonOptions.GetTypeInfo(jsonProperty.PropertyType);
+            if (propertyTypeInfo.Kind is JsonTypeInfoKind.Object)
+            {
+                SafeApplyToObject2(ref reader, ref obj, ref errors, ref ops, propertyTypeInfo, [], mergeOptions, jsonOptions);
+            }
+            else if (propertyTypeInfo.Kind is JsonTypeInfoKind.Dictionary)
+            {
+                SafeApplyToDictionary(ref reader, ref obj, ref errors, ref ops, propertyTypeInfo, [], mergeOptions, jsonOptions);
+            }
+            else if (propertyTypeInfo.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.None)
+            {
+                var converter = jsonOptions.GetConverter(jsonProperty.PropertyType);
+
+                try
+                {
+                    var value = ReadValueWithConverter(ref reader, converter, jsonProperty.PropertyType, jsonOptions);
+
+                    ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, value), obj));
+                }
+                catch (Exception e)
+                {
+                    errors.Add("~", $"Invalid value for this property. {e.Message}");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"JsonTypeInfoKind {typeInfo.Kind} is not allowed.");
+            }
+
+            reader.Read();
         }
     }
 
