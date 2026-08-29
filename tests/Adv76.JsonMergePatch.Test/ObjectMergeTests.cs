@@ -21,7 +21,6 @@ public sealed class ObjectMergeTests
 
     private class Class3()
     {
-        [JsonMergeConverterBehavior(Behavior = JsonMergeConverterBehavior.UseCustomConverter)]
         [JsonConverter(typeof(TimeSpanJsonConverter))]
         public TimeSpan TimeSpan1 { get; set; }
 

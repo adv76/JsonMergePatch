@@ -16,9 +16,9 @@ public sealed class JsonMergePatchResult
     /// <remarks>
     /// This is only set if <see cref="Succeeded"/> is false. If succeeded is true, it will be null.
     /// </remarks>
-    public Dictionary<string, string> Errors { get; private init; } = null!;
+    public Dictionary<string, string[]> Errors { get; private init; } = null!;
 
-    private JsonMergePatchResult(bool succeeded, Dictionary<string, string>? errors = null)
+    private JsonMergePatchResult(bool succeeded, Dictionary<string, string[]>? errors = null)
     {
         Succeeded = succeeded;
 
@@ -39,6 +39,6 @@ public sealed class JsonMergePatchResult
     /// </summary>
     /// <param name="errors">The errors that occurred.</param>
     /// <returns>An error patch result containing the provided errors.</returns>
-    public static JsonMergePatchResult Fail(Dictionary<string, string> errors)
+    public static JsonMergePatchResult Fail(Dictionary<string, string[]> errors)
         => new(false, errors);
 }

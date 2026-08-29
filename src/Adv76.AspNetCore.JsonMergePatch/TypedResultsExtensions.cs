@@ -15,11 +15,7 @@ public static class TypedResultsExtensions
                 throw new InvalidOperationException("The JsonMergePatch was successful.");
             }
 
-            var errors = result.Errors.ToDictionary<KeyValuePair<string, string>, string, string[]>(
-                kvp => kvp.Key,
-                kvp => [kvp.Value]);
-            
-            return TypedResults.ValidationProblem(errors);
+            return TypedResults.ValidationProblem(result.Errors);
         }
     }
 }

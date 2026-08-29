@@ -20,11 +20,10 @@ public sealed class SafeObjectMergeTests
 
     private class Class3()
     {
-        [JsonMergeConverterBehavior(Behavior = JsonMergeConverterBehavior.UseCustomConverter)]
-        [JsonConverter(typeof(Class3.TimeSpanJsonConverter))]
+        [JsonConverter(typeof(Class3.CustomTimeSpanJsonConverter))]
         public TimeSpan TimeSpan1 { get; set; }
 
-        public class TimeSpanJsonConverter : JsonConverter<TimeSpan>
+        public class CustomTimeSpanJsonConverter : JsonConverter<TimeSpan>
         {
             public override TimeSpan Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
