@@ -413,4 +413,73 @@ public sealed class DictionaryTests
         Assert.AreEqual(1, obj.ObjectDict["k1"].Int1);
         Assert.AreEqual(10, obj.PrimitiveDict["p1"]);
     }
+
+    // RFC7396 Section 2: null value means removal. Dictionary<int> and Dictionary<object> null removal.
+    [TestMethod]
+    public void Patch_PrimitiveIntDictionary_NullRemovesKey_Succeeds_ApplyTo()
+    {
+        var obj = new PrimitiveDictionaryModel
+        {
+            Dictionary1 = { ["hello"] = 1, ["world"] = 2 }
+        };
+        var patch = """{"Dictionary1": {"hello": null}}""";
+        JsonMergePatcher.ApplyTo(ref obj, patch);
+        // RFC7396: if Value is null and Name exists in Target, remove the Name/Value pair
+        Assert.IsFalse(obj.Dictionary1.ContainsKey("hello"), "RFC7396: null should remove key 'hello' from Dictionary<string,int>");
+        Assert.IsTrue(obj.Dictionary1.ContainsKey("world"));
+        Assert.HasCount(1, obj.Dictionary1);
+        Assert.AreEqual(2, obj.Dictionary1["world"]);
+    }
+
+    [TestMethod]
+    public void Patch_PrimitiveIntDictionary_NullRemovesKey_Succeeds_SafeApplyTo()
+    {
+        var obj = new PrimitiveDictionaryModel
+        {
+            Dictionary1 = { ["hello"] = 1, ["world"] = 2 }
+        };
+        var patch = """{"Dictionary1": {"hello": null}}""";
+        var result = JsonMergePatcher.SafeApplyTo(ref obj, patch);
+        Assert.IsTrue(result.Succeeded);
+        Assert.IsFalse(obj.Dictionary1.ContainsKey("hello"), "RFC7396: null should remove key 'hello'");
+        Assert.HasCount(1, obj.Dictionary1);
+    }
+
+    [TestMethod]
+    public void Patch_ObjectDictionary_NullRemovesKey_Succeeds_ApplyTo()
+    {
+        var obj = new ObjectDictionaryModel
+        {
+            Dictionary1 =
+            {
+                ["hello"] = new SimpleModel { Int1 = 3, String1 = "hello" },
+                ["world"] = new SimpleModel { Int1 = 4, String1 = "world" }
+            }
+        };
+        var patch = """{"Dictionary1": {"hello": null}}""";
+        JsonMergePatcher.ApplyTo(ref obj, patch);
+        // RFC7396: null should remove the entry, not replace with empty object
+        Assert.IsFalse(obj.Dictionary1.ContainsKey("hello"), "RFC7396: null should remove key 'hello' from Dictionary<string,SimpleModel>");
+        Assert.IsTrue(obj.Dictionary1.ContainsKey("world"));
+        Assert.HasCount(1, obj.Dictionary1);
+        Assert.AreEqual(4, obj.Dictionary1["world"].Int1);
+    }
+
+    [TestMethod]
+    public void Patch_ObjectDictionary_NullRemovesKey_Succeeds_SafeApplyTo()
+    {
+        var obj = new ObjectDictionaryModel
+        {
+            Dictionary1 =
+            {
+                ["hello"] = new SimpleModel { Int1 = 3, String1 = "hello" },
+                ["world"] = new SimpleModel { Int1 = 4, String1 = "world" }
+            }
+        };
+        var patch = """{"Dictionary1": {"hello": null}}""";
+        var result = JsonMergePatcher.SafeApplyTo(ref obj, patch);
+        Assert.IsTrue(result.Succeeded);
+        Assert.IsFalse(obj.Dictionary1.ContainsKey("hello"), "RFC7396: null should remove key 'hello'");
+        Assert.HasCount(1, obj.Dictionary1);
+    }
 }

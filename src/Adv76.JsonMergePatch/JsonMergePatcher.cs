@@ -134,6 +134,15 @@ public static class JsonMergePatcher
             }
 
             reader.Read();
+
+            if (reader.TokenType is JsonTokenType.Null)
+            {
+                ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt).Remove(key), dictionary));
+
+                reader.Read();
+
+                continue;
+            }
             
             var elementTypeInfo = jsonOptions.GetTypeInfo(typeInfo.ElementType);
             if (elementTypeInfo.Kind is JsonTypeInfoKind.Object)
@@ -160,7 +169,18 @@ public static class JsonMergePatcher
                 
                 SafeApplyToObject(ref reader, ref existing, ref errors, ref ops, elementTypeInfo, [..path, key.ToString()], mergeOptions, jsonOptions);
                 
-                ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[key] = existing, dictionary));
+                ops.Add(new JsonMergePatchOperation(tgt =>
+                {
+                    var dict = (IDictionary)tgt;
+                    if (existing is not null)
+                    {
+                        dict[key] = existing;
+                    }
+                    else
+                    {
+                        dict.Remove(key);
+                    }
+                }, dictionary));
 
             }
             else if (elementTypeInfo.Kind is JsonTypeInfoKind.Dictionary)
@@ -186,7 +206,18 @@ public static class JsonMergePatcher
                 
                 SafeApplyToDictionary(ref reader, ref existing, ref errors, ref ops, elementTypeInfo, [..path, key.ToString()], mergeOptions, jsonOptions);
                 
-                ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[key] = existing, dictionary));
+                ops.Add(new JsonMergePatchOperation(tgt =>
+                {
+                    var dict = (IDictionary)tgt;
+                    if (existing is not null)
+                    {
+                        dict[key] = existing;
+                    }
+                    else
+                    {
+                        dict.Remove(key);
+                    }
+                }, dictionary));
             }
             else if (elementTypeInfo.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.None)
             {
@@ -194,7 +225,18 @@ public static class JsonMergePatcher
                 {
                     var value = ReadValueWithConverter(ref reader, elementConverter, typeInfo.ElementType, jsonOptions);
 
-                    ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt)[key] = value, dictionary));
+                    ops.Add(new JsonMergePatchOperation(tgt =>
+                    {
+                        var dict = (IDictionary)tgt;
+                        if (value is not null)
+                        {
+                            dict[key] = value;
+                        }
+                        else
+                        {
+                            dict.Remove(key);
+                        }
+                    }, dictionary));
                 }
                 catch (Exception e)
                 {
