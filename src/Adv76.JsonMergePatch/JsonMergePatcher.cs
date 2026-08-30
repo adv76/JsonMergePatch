@@ -7,26 +7,54 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Adv76.JsonMergePatch;
 
+/// <summary>
+/// This class contains the functions to apply RFC7396 JSON Merge Patch
+/// documents to .NET types.
+/// </summary>
 public static class JsonMergePatcher
 {
-    public static void ApplyTo<T>(ref T obj, byte[] patchBytes, JsonMergeOptions? mergeOptions = null)
-    {
-        var result = SafeApplyTo<T>(ref obj, patchBytes, mergeOptions);
-        if (!result.Succeeded)
-        {
-            throw new JsonMergePatchException("Invalid JSON patch document.");
-        }
-    }
-
+    /// <summary>
+    /// Applies a string JSON patch to an object.
+    /// </summary>
+    /// <param name="obj">The object to patch</param>
+    /// <param name="patchString">The JSON patch as a string.</param>
+    /// <param name="mergeOptions">The options for the patch.</param>
+    /// <typeparam name="T">The type of the object to patch.</typeparam>
+    /// <exception cref="JsonMergePatchException">Throws if the patch failed.</exception>
     public static void ApplyTo<T>(ref T obj, string patchString, JsonMergeOptions? mergeOptions = null)
     {
-        var result = SafeApplyTo<T>(ref obj, patchString, mergeOptions);
+        var result = SafeApplyTo(ref obj, patchString, mergeOptions);
         if (!result.Succeeded)
         {
-            throw new JsonMergePatchException("Invalid JSON patch document.");
+            throw new JsonMergePatchException("Invalid JSON patch document.", result.Errors);
         }
     }
-
+    
+    /// <summary>
+    /// Applies a binary JSON patch to an object.
+    /// </summary>
+    /// <param name="obj">The object to patch</param>
+    /// <param name="patchBytes">The JSON patch in UTF-8 bytes.</param>
+    /// <param name="mergeOptions">The options for the patch.</param>
+    /// <typeparam name="T">The type of the object to patch.</typeparam>
+    /// <exception cref="JsonMergePatchException">Throws if the patch failed.</exception>
+    public static void ApplyTo<T>(ref T obj, byte[] patchBytes, JsonMergeOptions? mergeOptions = null)
+    {
+        var result = SafeApplyTo(ref obj, patchBytes, mergeOptions);
+        if (!result.Succeeded)
+        {
+            throw new JsonMergePatchException("Invalid JSON patch document.", result.Errors);
+        }
+    }
+    
+    /// <summary>
+    /// Applies a string JSON patch to an object.
+    /// </summary>
+    /// <param name="obj">The object to patch</param>
+    /// <param name="patchString">The JSON patch as a string.</param>
+    /// <param name="mergeOptions">The options for the patch.</param>
+    /// <typeparam name="T">The type of the object to patch.</typeparam>
+    /// <returns>A patch result object.</returns>
     public static JsonMergePatchResult SafeApplyTo<T>(ref T obj, string patchString,
         JsonMergeOptions? mergeOptions = null)
     {
@@ -34,6 +62,15 @@ public static class JsonMergePatcher
 
         return SafeApplyTo(ref obj, patchBytes, mergeOptions);
     }
+
+    /// <summary>
+    /// Applies a binary JSON patch to an object.
+    /// </summary>
+    /// <param name="obj">The object to patch</param>
+    /// <param name="patchBytes">The JSON patch in UTF-8 bytes.</param>
+    /// <param name="mergeOptions">The options for the patch.</param>
+    /// <typeparam name="T">The type of the object to patch.</typeparam>
+    /// <returns>A patch result object.</returns>
 
     public static JsonMergePatchResult SafeApplyTo<T>(ref T obj, byte[] patchBytes,
         JsonMergeOptions? mergeOptions = null)
@@ -264,13 +301,13 @@ public static class JsonMergePatcher
         {
             if (reader.TokenType is not JsonTokenType.PropertyName)
             {
-                throw new JsonMergePatchException("Invalid JSON. Expected property name.");
+                throw new InvalidOperationException("Invalid JSON. Expected property name.");
             }
 
             var propertyName = reader.GetString();
             if (propertyName is null)
             {
-                throw new JsonMergePatchException($"Invalid JSON. Property name is null.");
+                throw new InvalidOperationException($"Invalid JSON. Property name is null.");
             }
             
             var jsonProperty = typeInfo.Properties.FirstOrDefault(x => x.Name == propertyName);
