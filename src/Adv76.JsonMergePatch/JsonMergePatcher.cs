@@ -174,7 +174,8 @@ public static class JsonMergePatcher
 
             if (reader.TokenType is JsonTokenType.Null)
             {
-                ops.Add(new JsonMergePatchOperation(tgt => ((IDictionary)tgt).Remove(key), dictionary));
+                ops.Add(new JsonMergePatchOperation((IDictionary)dictionary, key, (object?)null));
+
 
                 reader.Read();
 
@@ -192,8 +193,10 @@ public static class JsonMergePatcher
 
                     if (newValue is null)
                     {
-                        errors.Add(GetPropertyPath(path, key.ToString()),
-                            $"Property {GetPropertyPath(path, key.ToString())} is null and cannot be created.");
+                        var pathString = GetPropertyPath(path, key.ToString());
+                        
+                        errors.Add(pathString,
+                            $"Property {pathString} is null and cannot be created.");
 
                         reader.Skip();
                         reader.Read();
@@ -206,19 +209,7 @@ public static class JsonMergePatcher
                 
                 SafeApplyToObject(ref reader, ref existing, ref errors, ref ops, elementTypeInfo, [..path, key.ToString()], mergeOptions, jsonOptions);
                 
-                ops.Add(new JsonMergePatchOperation(tgt =>
-                {
-                    var dict = (IDictionary)tgt;
-                    if (existing is not null)
-                    {
-                        dict[key] = existing;
-                    }
-                    else
-                    {
-                        dict.Remove(key);
-                    }
-                }, dictionary));
-
+                ops.Add(new JsonMergePatchOperation((IDictionary)dictionary, key, existing));
             }
             else if (elementTypeInfo.Kind is JsonTypeInfoKind.Dictionary)
             {
@@ -229,8 +220,10 @@ public static class JsonMergePatcher
                     var newValue = elementTypeInfo.CreateObject?.Invoke();
                     if (newValue is null)
                     {
-                        errors.Add(GetPropertyPath(path, key.ToString()),
-                            $"Property {GetPropertyPath(path, key.ToString())} is null and cannot be created.");
+                        var pathString = GetPropertyPath(path, key.ToString());
+                        
+                        errors.Add(pathString,
+                            $"Property {GetPropertyPath(path, pathString)} is null and cannot be created.");
 
                         reader.Skip();
                         reader.Read();
@@ -243,18 +236,7 @@ public static class JsonMergePatcher
                 
                 SafeApplyToDictionary(ref reader, ref existing, ref errors, ref ops, elementTypeInfo, [..path, key.ToString()], mergeOptions, jsonOptions);
                 
-                ops.Add(new JsonMergePatchOperation(tgt =>
-                {
-                    var dict = (IDictionary)tgt;
-                    if (existing is not null)
-                    {
-                        dict[key] = existing;
-                    }
-                    else
-                    {
-                        dict.Remove(key);
-                    }
-                }, dictionary));
+                ops.Add(new JsonMergePatchOperation((IDictionary)dictionary, key, existing));
             }
             else if (elementTypeInfo.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.None)
             {
@@ -262,18 +244,7 @@ public static class JsonMergePatcher
                 {
                     var value = ReadValueWithConverter(ref reader, elementConverter, typeInfo.ElementType, jsonOptions);
 
-                    ops.Add(new JsonMergePatchOperation(tgt =>
-                    {
-                        var dict = (IDictionary)tgt;
-                        if (value is not null)
-                        {
-                            dict[key] = value;
-                        }
-                        else
-                        {
-                            dict.Remove(key);
-                        }
-                    }, dictionary));
+                    ops.Add(new JsonMergePatchOperation((IDictionary)dictionary, key, value));
                 }
                 catch (Exception e)
                 {
@@ -323,8 +294,10 @@ public static class JsonMergePatcher
 
             if (jsonProperty.Set is null)
             {
-                errors.Add(GetPropertyPath(path, propertyName),
-                    $"Property {GetPropertyPath(path, propertyName)} has no setter.");
+                var pathString = GetPropertyPath(path, propertyName);
+                
+                errors.Add(pathString,
+                    $"Property {pathString} has no setter.");
 
                 reader.Skip();
                 reader.Read();
@@ -335,10 +308,12 @@ public static class JsonMergePatcher
             var securityPolicy = IsPropertyPatchable(jsonProperty, mergeOptions);
             if (securityPolicy != JsonMergeSecurityPolicy.AllowPatching)
             {
+                var pathString = GetPropertyPath(path, propertyName);
+                
                 if (securityPolicy == JsonMergeSecurityPolicy.BlockPatching)
                 {
-                    errors.Add(GetPropertyPath(path, propertyName),
-                        $"Patching{GetPropertyPath(path, propertyName)} is prohibited.");
+                    errors.Add(pathString,
+                        $"Patching{pathString} is prohibited.");
                 }
 
                 reader.Skip();
@@ -358,8 +333,10 @@ public static class JsonMergePatcher
                     var newObjectValue = propertyTypeInfo.CreateObject?.Invoke();
                     if (newObjectValue is null)
                     {
-                        errors.Add(GetPropertyPath(path, propertyName),
-                            $"Property {GetPropertyPath(path, propertyName)} is null and cannot be created.");
+                        var pathString = GetPropertyPath(path, propertyName);
+                        
+                        errors.Add(pathString,
+                            $"Property {pathString} is null and cannot be created.");
 
                         reader.Skip();
                         reader.Read();
@@ -367,7 +344,7 @@ public static class JsonMergePatcher
                         continue;
                     }
                     
-                    ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, newObjectValue), obj));
+                    ops.Add(new JsonMergePatchOperation(obj, newObjectValue, jsonProperty.Set));
 
                     currentObjectValue = newObjectValue;
                 }
@@ -382,8 +359,10 @@ public static class JsonMergePatcher
                     var newDictionaryValue = propertyTypeInfo.CreateObject?.Invoke();
                     if (newDictionaryValue is null)
                     {
-                        errors.Add(GetPropertyPath(path, propertyName),
-                            $"Property {GetPropertyPath(path, propertyName)} is null and cannot be created.");
+                        var pathString = GetPropertyPath(path, propertyName);
+                        
+                        errors.Add(pathString,
+                            $"Property {pathString} is null and cannot be created.");
 
                         reader.Skip();
                         reader.Read();
@@ -391,7 +370,8 @@ public static class JsonMergePatcher
                         continue;
                     }
                     
-                    ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, newDictionaryValue), obj));
+                    ops.Add(new JsonMergePatchOperation(obj, newDictionaryValue, jsonProperty.Set));
+
                     
                     currentDictionaryValue = newDictionaryValue;
                 }
@@ -406,7 +386,7 @@ public static class JsonMergePatcher
                 {
                     var value = ReadValueWithConverter(ref reader, converter, jsonProperty.PropertyType, jsonOptions);
 
-                    ops.Add(new JsonMergePatchOperation(tgt => jsonProperty.Set(tgt, value), obj));
+                    ops.Add(new JsonMergePatchOperation(obj, value, jsonProperty.Set));
                 }
                 catch (Exception e)
                 {
@@ -454,7 +434,8 @@ public static class JsonMergePatcher
     {
         var p = typeof(JsonPropertyInfo).GetProperty("JsonTypeInfo", BindingFlags.NonPublic | BindingFlags.Instance)!;
         
-        return p.GetValue(property, null) as JsonTypeInfo;
+        // Suppress null
+        return (JsonTypeInfo)p.GetValue(property, null)!;
     }
 
     private static object? ReadValueWithConverter(ref Utf8JsonReader reader, JsonConverter converter, Type propertyType,
