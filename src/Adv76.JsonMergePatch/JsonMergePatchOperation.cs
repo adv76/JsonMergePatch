@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace Adv76.JsonMergePatch;
 
-internal class JsonMergePatchOperation
+internal readonly struct JsonMergePatchOperation
 {
     private readonly bool _dictOp;
 

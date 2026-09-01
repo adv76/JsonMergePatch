@@ -151,6 +151,8 @@ public static class JsonMergePatcher
         var keyConverter = jsonOptions.GetConverter(typeInfo.KeyType);
         var elementConverter = jsonOptions.GetConverter(typeInfo.ElementType);
         
+        var elementTypeInfo = jsonOptions.GetTypeInfo(typeInfo.ElementType);
+        
         while (reader.TokenType is not JsonTokenType.EndObject)
         {
             object? key = null;
@@ -182,7 +184,6 @@ public static class JsonMergePatcher
                 continue;
             }
             
-            var elementTypeInfo = jsonOptions.GetTypeInfo(typeInfo.ElementType);
             if (elementTypeInfo.Kind is JsonTypeInfoKind.Object)
             {
                 var existing = ((IDictionary)dictionary).Contains(key) ? ((IDictionary)dictionary)[key] : null;
@@ -223,7 +224,7 @@ public static class JsonMergePatcher
                         var pathString = GetPropertyPath(path, key.ToString());
                         
                         errors.Add(pathString,
-                            $"Property {GetPropertyPath(path, pathString)} is null and cannot be created.");
+                            $"Property {pathString} is null and cannot be created.");
 
                         reader.Skip();
                         reader.Read();
@@ -430,12 +431,14 @@ public static class JsonMergePatcher
         return string.Join('.', path);
     }
 
+    private static PropertyInfo? _jsonTypeInfoPropertyInfo;
+    
     private static JsonTypeInfo GetTypeInfo(JsonPropertyInfo property)
     {
-        var p = typeof(JsonPropertyInfo).GetProperty("JsonTypeInfo", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        _jsonTypeInfoPropertyInfo ??= typeof(JsonPropertyInfo).GetProperty("JsonTypeInfo", BindingFlags.NonPublic | BindingFlags.Instance)!;
         
         // Suppress null
-        return (JsonTypeInfo)p.GetValue(property, null)!;
+        return (JsonTypeInfo)_jsonTypeInfoPropertyInfo.GetValue(property, null)!;
     }
 
     private static object? ReadValueWithConverter(ref Utf8JsonReader reader, JsonConverter converter, Type propertyType,
@@ -448,12 +451,13 @@ public static class JsonMergePatcher
     
     private delegate object? ReadDelegate(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o);
 
+    private static MethodInfo? _readMethodInfo;
+    
     private static ReadDelegate CreateGenericReadDelegate(Type valueType)
     {
-        var m = typeof(JsonMergePatcher).GetMethod(nameof(Read), BindingFlags.Static | BindingFlags.NonPublic)!
-            .MakeGenericMethod(valueType);
+        _readMethodInfo ??= typeof(JsonMergePatcher).GetMethod(nameof(Read), BindingFlags.Static | BindingFlags.NonPublic)!;
 
-        return m.CreateDelegate<ReadDelegate>();
+        return _readMethodInfo.MakeGenericMethod(valueType).CreateDelegate<ReadDelegate>();
     }
 
     private static object? Read<TValue>(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o)
@@ -469,12 +473,13 @@ public static class JsonMergePatcher
     
     private delegate object? ReadAsPropertyNameDelegate(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o);
 
+    private static MethodInfo? _readAsPropertyNameMethodInfo;
+    
     private static ReadAsPropertyNameDelegate CreateGenericReadAsPropertyNameDelegate(Type valueType)
     {
-        var m = typeof(JsonMergePatcher).GetMethod(nameof(ReadAsPropertyName), BindingFlags.Static | BindingFlags.NonPublic)!
-            .MakeGenericMethod(valueType);
+        _readAsPropertyNameMethodInfo ??= typeof(JsonMergePatcher).GetMethod(nameof(ReadAsPropertyName), BindingFlags.Static | BindingFlags.NonPublic)!;
 
-        return m.CreateDelegate<ReadAsPropertyNameDelegate>();
+        return _readAsPropertyNameMethodInfo.MakeGenericMethod(valueType).CreateDelegate<ReadAsPropertyNameDelegate>();
     }
 
     private static object? ReadAsPropertyName<TValue>(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o)
