@@ -285,7 +285,7 @@ public static class JsonMergePatcher
             var jsonProperty = typeInfo.Properties.FirstOrDefault(x => x.Name == propertyName);
             if (jsonProperty is null)
             {
-                errors.Add("~", $"Property {GetPropertyPath(path, propertyName)} not found.");
+                errors.Add(GetPropertyPath(path, propertyName), $"Property {GetPropertyPath(path, propertyName)} not found.");
 
                 reader.Skip();
                 reader.Read();
@@ -314,7 +314,7 @@ public static class JsonMergePatcher
                 if (securityPolicy == JsonMergeSecurityPolicy.BlockPatching)
                 {
                     errors.Add(pathString,
-                        $"Patching{pathString} is prohibited.");
+                        $"Patching {pathString} is prohibited.");
                 }
 
                 reader.Skip();
@@ -391,7 +391,7 @@ public static class JsonMergePatcher
                 }
                 catch (Exception e)
                 {
-                    errors.Add("~", $"Invalid value for this property. {e.Message}");
+                    errors.Add(GetPropertyPath(path, propertyName), $"Invalid value for property {GetPropertyPath(path, propertyName)}. {e.Message}");
                 }
             }
             else

@@ -15,11 +15,6 @@ public sealed class JsonMergePatchException : Exception
     /// The errors that caused the exception
     /// </summary>
     public Dictionary<string, string[]>? Errors { get; }
-    
-    private JsonMergePatchException()
-    {
-        Errors = null;
-    }
 
     internal JsonMergePatchException(string message, Dictionary<string, string[]> errors) : base(message)
     {
