@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Adv76.JsonMergePatch;
@@ -11,12 +9,34 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Adv76.AspNetCore.JsonMergePatch;
-
+/// <summary>
+/// Extension methods for adding OpenAPI metadata to ASP.NET Core endpoints.
+/// </summary>
 public static class OpenApiExtensions
 {
+    /// <summary>
+    /// Adds generic Accepts metadata to the route builder for JSON merge patch.
+    /// </summary>
+    /// <remarks>
+    /// Sets the allowed content types to "application/merge-patch+json" and
+    /// "application/json".
+    /// </remarks>
+    /// <param name="builder">The route builder to add the metadata to.</param>
+    /// <returns>The route builder</returns>
     public static RouteHandlerBuilder AcceptsJsonMergePatch(this RouteHandlerBuilder builder)
         => builder.Accepts<object>("application/merge-patch+json", "application/json");
 
+    /// <summary>
+    /// Adds typed Accepts metadata to the route builder for JSON merge patch.
+    /// </summary>
+    /// <remarks>
+    /// Builds a typed JsonMergePatch document using reflection for the type T. This
+    /// gives the endpoint strongly typed patch document metdata, which will show
+    /// in the OpenAPI spec and many OpenAPI viewer tools. Sets the allowed content
+    /// types to "application/merge-patch+json" and "application/json".
+    /// </remarks>
+    /// <param name="builder">The route builder to add the metadata to.</param>
+    /// <returns>The route builder</returns>
     public static RouteHandlerBuilder AcceptsTypedJsonMergePatch<T>(this RouteHandlerBuilder builder)
     {
         builder.Add(convention =>

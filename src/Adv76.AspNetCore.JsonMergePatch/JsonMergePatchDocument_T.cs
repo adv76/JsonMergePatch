@@ -7,6 +7,13 @@ using Microsoft.Extensions.Options;
 
 namespace Adv76.AspNetCore.JsonMergePatch;
 
+/// <summary>
+/// A JsonMergePatch document
+/// </summary>
+/// <remarks>
+/// The JSON merge patch is automatically read from the HTTP request body.
+/// </remarks>
+/// <typeparam name="T">The type that the patch is for.</typeparam>
 public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatchDocument<T>>
 {
     private readonly JsonMergeOptions? _mergeOptions;
@@ -18,16 +25,34 @@ public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatch
         _mergeOptions = mergeOptions;
     }
     
+    /// <summary>
+    /// Applies the patch to an object
+    /// </summary>
+    /// <remarks>
+    /// This method applies the patch to the object using <see cref="JsonMergePatcher"/> ApplyTo.
+    /// It will throw if the patch is invalid.
+    /// </remarks>
+    /// <param name="obj">The object to patch.</param>
     public void ApplyTo(ref T obj)
     {
         JsonMergePatcher.ApplyTo(ref obj, _jsonBodyString, _mergeOptions);
     }
     
+    /// <summary>
+    /// Applies the patch to an object
+    /// </summary>
+    /// /// <remarks>
+    /// This method applies the patch to the object using <see cref="JsonMergePatcher"/> SafeApplyTo.
+    /// It will not throw if the patch is invalid.
+    /// </remarks>
+    /// <param name="obj">The object to patch.</param>
+    /// <returns>The result of the patch operation.</returns>
     public JsonMergePatchResult SafeApplyTo(ref T obj)
     {
         return JsonMergePatcher.SafeApplyTo(ref obj, _jsonBodyString, _mergeOptions);
     }
     
+    /// <inheritdoc/>
     public static async ValueTask<JsonMergePatchDocument<T>?> BindAsync(HttpContext context, ParameterInfo parameter)
     {
         var jsonOptions = context.RequestServices.GetService<IOptions<JsonOptions>>();
