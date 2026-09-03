@@ -11,7 +11,7 @@ namespace Adv76.JsonMergePatch;
 /// This class contains the functions to apply RFC7396 JSON Merge Patch
 /// documents to .NET types.
 /// </summary>
-public static class JsonMergePatcher
+public static partial class JsonMergePatcher
 {
     /// <summary>
     /// Applies a string JSON patch to an object.
@@ -431,57 +431,4 @@ public static class JsonMergePatcher
         return string.Join('.', path);
     }
 
-    private static PropertyInfo? _jsonTypeInfoPropertyInfo;
-    
-    private static JsonTypeInfo GetTypeInfo(JsonPropertyInfo property)
-    {
-        _jsonTypeInfoPropertyInfo ??= typeof(JsonPropertyInfo).GetProperty("JsonTypeInfo", BindingFlags.NonPublic | BindingFlags.Instance)!;
-        
-        // Suppress null
-        return (JsonTypeInfo)_jsonTypeInfoPropertyInfo.GetValue(property, null)!;
-    }
-
-    private static object? ReadValueWithConverter(ref Utf8JsonReader reader, JsonConverter converter, Type propertyType,
-        JsonSerializerOptions jsonOptions)
-    {
-        var readDelegate = CreateGenericReadDelegate(propertyType);
-        
-        return readDelegate(converter, ref reader, propertyType, jsonOptions);
-    }
-    
-    private delegate object? ReadDelegate(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o);
-
-    private static MethodInfo? _readMethodInfo;
-    
-    private static ReadDelegate CreateGenericReadDelegate(Type valueType)
-    {
-        _readMethodInfo ??= typeof(JsonMergePatcher).GetMethod(nameof(Read), BindingFlags.Static | BindingFlags.NonPublic)!;
-
-        return _readMethodInfo.MakeGenericMethod(valueType).CreateDelegate<ReadDelegate>();
-    }
-
-    private static object? Read<TValue>(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o)
-        => ((JsonConverter<TValue>)c).Read(ref r, t, o);
-    
-    private static object? ReadValueAsPropertyNameWithConverter(ref Utf8JsonReader reader, JsonConverter converter, Type propertyType,
-        JsonSerializerOptions jsonOptions)
-    {
-        var readDelegate = CreateGenericReadAsPropertyNameDelegate(propertyType);
-        
-        return readDelegate(converter, ref reader, propertyType, jsonOptions);
-    }
-    
-    private delegate object? ReadAsPropertyNameDelegate(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o);
-
-    private static MethodInfo? _readAsPropertyNameMethodInfo;
-    
-    private static ReadAsPropertyNameDelegate CreateGenericReadAsPropertyNameDelegate(Type valueType)
-    {
-        _readAsPropertyNameMethodInfo ??= typeof(JsonMergePatcher).GetMethod(nameof(ReadAsPropertyName), BindingFlags.Static | BindingFlags.NonPublic)!;
-
-        return _readAsPropertyNameMethodInfo.MakeGenericMethod(valueType).CreateDelegate<ReadAsPropertyNameDelegate>();
-    }
-
-    private static object? ReadAsPropertyName<TValue>(JsonConverter c, ref Utf8JsonReader r, Type t, JsonSerializerOptions o)
-        => ((JsonConverter<TValue>)c).ReadAsPropertyName(ref r, t, o);
 }
