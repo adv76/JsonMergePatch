@@ -120,7 +120,7 @@ public sealed class SimplePropertyTests
         var patch = """{"UnknownProp": 123}""";
         var result = JsonMergePatcher.SafeApplyTo(ref obj, patch);
         Assert.IsFalse(result.Succeeded);
-        Assert.IsTrue(result.Errors.ContainsKey("~"));
+        Assert.IsTrue(result.Errors.ContainsKey("UnknownProp"));
         Assert.AreEqual(3, obj.Int1);
         Assert.AreEqual("hello", obj.String1);
     }

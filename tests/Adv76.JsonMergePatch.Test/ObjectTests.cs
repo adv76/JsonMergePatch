@@ -145,7 +145,7 @@ public sealed class ObjectTests
         var patch = """{"Inner": {"Unknown": 1}}""";
         var result = JsonMergePatcher.SafeApplyTo(ref obj, patch);
         Assert.IsFalse(result.Succeeded);
-        Assert.IsTrue(result.Errors.ContainsKey("~"));
+        Assert.IsTrue(result.Errors.ContainsKey("Inner.Unknown"));
         Assert.AreEqual(3, obj.Inner?.Int1);
     }
 
