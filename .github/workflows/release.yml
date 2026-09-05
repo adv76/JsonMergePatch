@@ -47,7 +47,7 @@ jobs:
           MMDD="$(date -u +%m%d)"
           ASSEMBLY_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           FILE_VERSION="${MAJOR}.${MINOR}.${PATCH}${YY}.${MMDD}"
-          dotnet pack --configuration Release --output ./nupkg /p:Version=$VERSION /p:AssemblyVersion=$ASSEMBLY_VERSION /p:FileVersion=$FILE_VERSION
+          dotnet pack --configuration Release --no-build --output ./nupkg /p:Version=$VERSION /p:AssemblyVersion=$ASSEMBLY_VERSION /p:FileVersion=$FILE_VERSION
 
       - name: NuGet login (Trusted Publishing)
         if: startsWith(github.ref, 'refs/tags/v')
