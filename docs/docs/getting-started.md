@@ -4,13 +4,7 @@
 
 For basic JSON Merge Patch support install `Adv76.JsonMergePatch` from nuget.org.
 
-> [!NOTE]
-> This package is not on nuget yet. The docs are in progress. For now you will have to clone and build yourself.
-
 For integrating with ASP.NET Core, install `Adv76.JsonMergePatch.AspNetCore` from nuget.org.
-
-> [!NOTE]
-> This package is not on nuget yet. The docs are in progress. For now you will have to clone and build yourself.
 
 ## Usage
 
