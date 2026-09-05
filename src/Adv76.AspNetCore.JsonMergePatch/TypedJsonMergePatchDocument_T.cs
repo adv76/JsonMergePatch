@@ -61,7 +61,7 @@ public class TypedJsonMergePatchDocument<T> : IBindableFromHttpContext<TypedJson
         return JsonMergePatcher.SafeApplyTo(ref obj, _jsonBodyString, _mergeOptions);
     }
 
-    /// <<inheritdoc/>
+    /// <inheritdoc/>
     public static async ValueTask<TypedJsonMergePatchDocument<T>?> BindAsync(HttpContext context,
         ParameterInfo parameter)
     {
@@ -81,7 +81,7 @@ public class TypedJsonMergePatchDocument<T> : IBindableFromHttpContext<TypedJson
         return new TypedJsonMergePatchDocument<T>(bodyString, merge);
     }
 
-    /// <<inheritdoc/>
+    /// <inheritdoc/>
     public static void PopulateMetadata(ParameterInfo parameter, EndpointBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(parameter);

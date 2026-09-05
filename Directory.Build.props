@@ -10,7 +10,6 @@
         <Product>JsonMergePatch</Product>
         <PackageTags>json;merge;patch;jsonmerge;jsonpatch;jsonmergepatch;json-merge;json-patch;json-merge-patch</PackageTags>
         <PackageProjectUrl>https://github.com/adv76/JsonMergePatch</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/adv76/JsonMergePatch/blob/master/LICENSE</PackageLicenseUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Copyright>Copyright (c) 2026 adv76</Copyright>
