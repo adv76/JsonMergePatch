@@ -15,6 +15,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Adv76.AspNetCore.JsonMergePatch\Adv76.AspNetCore.JsonMergePatch.csproj" />
+      <ProjectReference Include="..\..\src\Adv76.AspNetCore.JsonMergePatch.OpenApi\Adv76.AspNetCore.JsonMergePatch.OpenApi.csproj" />
     </ItemGroup>
 
 </Project>
