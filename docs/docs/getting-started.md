@@ -6,6 +6,8 @@ For basic JSON Merge Patch support install `Adv76.JsonMergePatch` from nuget.org
 
 For integrating with ASP.NET Core, install `Adv76.JsonMergePatch.AspNetCore` from nuget.org.
 
+For customizing OpenAPI documentation, also install `Adv76.JsonMergePatch.AspNetCore.OpenAPI` from nuget.org.
+
 ## Usage
 
 ### Basic
@@ -54,11 +56,26 @@ First an example of a basic patch endpoint (Minimal API):
         }
 
         return TypedResults.ValidationProblem(result);
-    }).AcceptsJsonMergePatch();
+    })
     
-A few things to note from the snippet above:
+A couple of things to note from the snippet above:
 
 1. `JsonMergePatchDocument<T>` is a wrapper class that automatically populates the patch document from the HTTP Request body. Calling `SafeApplyTo()` on the patch document internally calls the `JsonMergePatcher.SafeApplyTo()` method.
 2. `TypedResults` is extended with an additional overload for `TypedResults.ValidationProblem()` that accepts a `JsonMergePatchResult` for returning errors to the user.
-3. `AcceptsJsonMergePatch()` sets the endpoint to accept either "application/merge-patch+json" or as a fallback "application/json" as the Content-Type. It also adds the appropriate metadata so the OpenAPI spec is correct.
 
+### OpenAPI Integration
+
+Generate strongly-typed OpenAPI documents with the OpenAPI integration. By default, the OpenAPI document just shows an empty object for the body of patch endpoints.
+
+Register the transformer when configuring OpenAPI:
+
+    using Adv76.AspNetCore.JsonMergePatch.OpenApi;
+
+    ...
+
+    builder.Services.AddOpenApi(options => options.AddJsonMergePatch());
+
+Endpoints with body type of `JsonMergePatchDocument<T>` get a merge-patch request body schema in the OpenAPI document.
+- All properties are optional and nullable.
+- Properties block from patching via security policies are hidden.
+- Nested objects recurse into their own patch schemas.

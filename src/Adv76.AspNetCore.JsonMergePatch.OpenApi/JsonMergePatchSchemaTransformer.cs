@@ -12,8 +12,7 @@ namespace Adv76.AspNetCore.JsonMergePatch.OpenApi;
 
 /// <summary>
 /// Populates the schema of <see cref="JsonMergePatchDocument{T}"/> with the merge-patch
-/// shape of <c>T</c> so the OpenAPI document shows the patchable properties without
-/// emitting runtime types.
+/// shape of <c>T</c> so the OpenAPI document shows the patchable properties.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -30,7 +29,7 @@ namespace Adv76.AspNetCore.JsonMergePatch.OpenApi;
 /// <item>Properties blocked by <see cref="JsonMergePropertySecurityAttribute"/> or the
 /// <see cref="JsonMergeOptions.SecurityPolicy"/> default are hidden.</item>
 /// <item>Nested POCOs recurse into their own <c>JsonMergePatch{T}Name</c> component schemas.
-/// Collections/dictionaries keep the framework schema (RFC 7396 replaces them wholesale).</item>
+/// Collections keep the framework schema (RFC 7396 replaces them completely).</item>
 /// </list>
 /// </para>
 /// <para>
