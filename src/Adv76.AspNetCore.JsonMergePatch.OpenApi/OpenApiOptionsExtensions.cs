@@ -8,10 +8,10 @@ namespace Adv76.AspNetCore.JsonMergePatch.OpenApi;
 public static class OpenApiOptionsExtensions
 {
     /// <summary>
-    /// Adds the JsonMergePatch operation transformer, which rewrites the request-body
-    /// schema of endpoints whose body type is <see cref="JsonMergePatchDocument{T}"/>
-    /// so the OpenAPI document shows the merge-patch shape (all properties optional
-    /// and nullable, blocked properties hidden).
+    /// Adds the JsonMergePatch schema transformer, which populates the schema of
+    /// <see cref="JsonMergePatchDocument{T}"/> with the merge-patch shape of
+    /// <c>T</c> so the OpenAPI document shows all properties as optional and
+    /// nullable, with blocked properties hidden.
     /// </summary>
     /// <param name="options">The OpenAPI options to add the transformer to.</param>
     /// <returns>The options, for chaining.</returns>
@@ -19,7 +19,7 @@ public static class OpenApiOptionsExtensions
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        options.AddOperationTransformer<JsonMergePatchOperationTransformer>();
+        options.AddSchemaTransformer<JsonMergePatchSchemaTransformer>();
 
         return options;
     }
