@@ -47,30 +47,21 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
         ArgumentNullException.ThrowIfNull(context);
 
         var schemaType = context.JsonTypeInfo?.Type;
-        if (schemaType is null)
+        if (schemaType is null
+            || !schemaType.IsGenericType
+            || schemaType.GetGenericTypeDefinition() != typeof(JsonMergePatchDocument<>))
         {
             return;
         }
-        
-        if (!schemaType.IsGenericType || schemaType.GetGenericTypeDefinition() != typeof(JsonMergePatchDocument<>))
-        {
-            return;
-        }
-        
+
         var targetType = schemaType.GetGenericArguments()[0];
-        
+
         var jsonOpts = context.ApplicationServices.GetService<IOptions<JsonOptions>>();
         var mergeOpts = context.ApplicationServices.GetService<IOptions<JsonMergeOptions>>();
 
         var jsonMergeOptions = mergeOpts?.Value ?? JsonMergeOptions.Default;
+        var jsonSerializerOptions = jsonOpts?.Value.SerializerOptions ?? jsonMergeOptions.JsonSerializerOptions ?? JsonSerializerOptions.Default;
 
-        if (jsonMergeOptions.JsonSerializerOptions is null && jsonOpts is not null)
-        {
-            jsonMergeOptions.JsonSerializerOptions = jsonOpts.Value.SerializerOptions;
-        }
-
-        var jsonSerializerOptions = jsonMergeOptions.JsonSerializerOptions ?? JsonSerializerOptions.Default;
-        
         try
         {
             var typeInfo = jsonSerializerOptions.GetTypeInfo(targetType);
@@ -89,7 +80,7 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
             schema.Type = JsonSchemaType.Object;
             schema.Description =
                 $"JSON merge patch (RFC 7396) document for {typeInfo.Type.Name}. All properties are optional.";
-            schema.Required = new HashSet<string>();
+            schema.Required = new HashSet<string>(StringComparer.Ordinal);
             schema.Properties = properties;
         }
         catch
@@ -139,13 +130,9 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
     {
         var typeInfo = serializerOptions.GetTypeInfo(property.PropertyType);
 
-        if (typeInfo.Kind is JsonTypeInfoKind.Object && typeInfo.Type != typeof(object))
+        if (IsPatchableObject(typeInfo))
         {
-            var propertyPatchType = typeof(JsonMergePatchDocument<>).MakeGenericType(property.PropertyType);
-            var schema = await context
-                .GetOrCreateSchemaAsync(propertyPatchType, null, cancellationToken);
-
-            return MakeNullable(schema);
+            return await GetPatchSchemaAsync(property.PropertyType, context, cancellationToken);
         }
 
         if (typeInfo.Kind is JsonTypeInfoKind.Dictionary && typeInfo.ElementType is not null)
@@ -164,10 +151,7 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
                 return MakeNullable(baseSchema);
             }
 
-            var copy = (OpenApiSchema)baseSchema.CreateShallowCopy();
-            copy.AdditionalProperties = valueSchema;
-
-            return MakeNullable(copy);
+            return WithPatchedAdditionalProperties(baseSchema, valueSchema);
         }
 
         var leafSchema = await context
@@ -188,13 +172,9 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
     {
         var elementInfo = serializerOptions.GetTypeInfo(elementType);
 
-        if (elementInfo.Kind is JsonTypeInfoKind.Object && elementInfo.Type != typeof(object))
+        if (IsPatchableObject(elementInfo))
         {
-            var wrapperType = typeof(JsonMergePatchDocument<>).MakeGenericType(elementType);
-            var patchSchema = await context
-                .GetOrCreateSchemaAsync(wrapperType, null, cancellationToken);
-
-            return MakeNullable(patchSchema);
+            return await GetPatchSchemaAsync(elementType, context, cancellationToken);
         }
 
         if (elementInfo.Kind is JsonTypeInfoKind.Dictionary && elementInfo.ElementType is not null)
@@ -212,21 +192,40 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
 
             var baseSchema = await context
                 .GetOrCreateSchemaAsync(elementType, null, cancellationToken);
-            
-            var copy = (OpenApiSchema)baseSchema.CreateShallowCopy();
-            copy.AdditionalProperties = nestedSchema;
 
-            return MakeNullable(copy);
+            return WithPatchedAdditionalProperties(baseSchema, nestedSchema);
         }
 
         return null;
+    }
+
+    private static bool IsPatchableObject(JsonTypeInfo typeInfo)
+        => typeInfo.Kind is JsonTypeInfoKind.Object && typeInfo.Type != typeof(object);
+
+    private static async Task<IOpenApiSchema> GetPatchSchemaAsync(
+        Type elementType,
+        OpenApiSchemaTransformerContext context,
+        CancellationToken cancellationToken)
+    {
+        var wrapperType = typeof(JsonMergePatchDocument<>).MakeGenericType(elementType);
+        var patchSchema = await context.GetOrCreateSchemaAsync(wrapperType, null, cancellationToken);
+
+        return MakeNullable(patchSchema);
+    }
+
+    private static IOpenApiSchema WithPatchedAdditionalProperties(IOpenApiSchema baseSchema, IOpenApiSchema valueSchema)
+    {
+        var copy = (OpenApiSchema)baseSchema.CreateShallowCopy();
+        copy.AdditionalProperties = valueSchema;
+
+        return MakeNullable(copy);
     }
 
     private static IOpenApiSchema MakeNullable(IOpenApiSchema schema)
     {
         if (schema is OpenApiSchema concrete && concrete.Type.HasValue)
         {
-            if ((concrete.Type.Value & JsonSchemaType.Null) != 0)
+            if (concrete.Type.Value.HasFlag(JsonSchemaType.Null))
             {
                 return concrete;
             }
@@ -238,11 +237,11 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
 
         return new OpenApiSchema
         {
-            AnyOf = new List<IOpenApiSchema>
-            {
+            AnyOf =
+            [
                 schema,
                 new OpenApiSchema { Type = JsonSchemaType.Null },
-            },
+            ],
         };
     }
 
@@ -250,7 +249,7 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
     {
         if (propertyInfo.AttributeProvider is null)
         {
-            return false;
+            return mergeOptions.SecurityPolicy == JsonMergeSecurityPolicy.AllowPatching;
         }
 
         var attributes =
