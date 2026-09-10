@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using Adv76.AspNetCore.JsonMergePatch;
 using Adv76.JsonMergePatch;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.OpenApi;
@@ -28,8 +27,7 @@ namespace Adv76.AspNetCore.JsonMergePatch.OpenApi;
 /// null branch).</item>
 /// <item>Properties blocked by <see cref="JsonMergePropertySecurityAttribute"/> or the
 /// <see cref="JsonMergeOptions.SecurityPolicy"/> default are hidden.</item>
-/// <item>Nested POCOs recurse into their own <c>JsonMergePatch{T}Name</c> component schemas.
-/// Collections keep the framework schema (RFC 7396 replaces them completely).</item>
+/// <item>Nested POCOs recurse into their own <c>JsonMergePatch{T}Name</c> component schemas.</item>
 /// </list>
 /// </para>
 /// <para>
@@ -53,7 +51,7 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
         {
             return;
         }
-
+        
         if (!schemaType.IsGenericType || schemaType.GetGenericTypeDefinition() != typeof(JsonMergePatchDocument<>))
         {
             return;
@@ -73,30 +71,21 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
 
         var jsonSerializerOptions = jsonMergeOptions.JsonSerializerOptions ?? JsonSerializerOptions.Default;
         
-        JsonTypeInfo typeInfo;
         try
         {
-            typeInfo = jsonSerializerOptions.GetTypeInfo(targetType);
-        }
-        catch
-        {
-            return;
-        }
+            var typeInfo = jsonSerializerOptions.GetTypeInfo(targetType);
+            if (typeInfo.Kind is not JsonTypeInfoKind.Object)
+            {
+                return;
+            }
 
-        if (typeInfo.Kind != JsonTypeInfoKind.Object)
-        {
-            return;
-        }
-
-        try
-        {
             var properties = await BuildPatchPropertiesAsync(
                 typeInfo,
                 context,
                 jsonSerializerOptions,
                 jsonMergeOptions,
-                cancellationToken).ConfigureAwait(false);
-            
+                cancellationToken);
+
             schema.Type = JsonSchemaType.Object;
             schema.Description =
                 $"JSON merge patch (RFC 7396) document for {typeInfo.Type.Name}. All properties are optional.";
@@ -105,7 +94,7 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
         }
         catch
         {
-            // Leave the generated schema untouched when patch shaping fails.
+            // Leave the schema untouched when patch shaping fails.
         }
     }
 
@@ -120,63 +109,117 @@ public sealed class JsonMergePatchSchemaTransformer : IOpenApiSchemaTransformer
 
         foreach (var property in typeInfo.Properties)
         {
-            if (!IsPropertyPatchable(property, mergeOptions))
-            {
-                continue;
-            }
-
-            IOpenApiSchema propertySchema;
-
-            JsonTypeInfo? nested;
             try
             {
-                nested = serializerOptions.GetTypeInfo(property.PropertyType);
+                if (!IsPropertyPatchable(property, mergeOptions))
+                {
+                    continue;
+                }
+
+                properties[property.Name] = await BuildPropertySchemaAsync(
+                    property,
+                    context,
+                    serializerOptions,
+                    cancellationToken);
             }
             catch
             {
-                nested = null;
+                // Skip properties whose schema cannot be shaped.
             }
-
-            if (nested is not null && nested.Kind == JsonTypeInfoKind.Object && nested.Type != typeof(object))
-            {
-                OpenApiSchema baseSchema;
-
-                var nestedType = typeof(JsonMergePatchDocument<>).MakeGenericType(property.PropertyType);
-                
-                try
-                {
-                    baseSchema = await context
-                        .GetOrCreateSchemaAsync(nestedType, null, cancellationToken)
-                        .ConfigureAwait(false);
-                }
-                catch
-                {
-                    continue;
-                }
-
-                propertySchema = MakeNullable(baseSchema);
-            }
-            else
-            {
-                OpenApiSchema baseSchema;
-                try
-                {
-                    baseSchema = await context
-                        .GetOrCreateSchemaAsync(property.PropertyType, null, cancellationToken)
-                        .ConfigureAwait(false);
-                }
-                catch
-                {
-                    continue;
-                }
-
-                propertySchema = MakeNullable(baseSchema);
-            }
-
-            properties[property.Name] = propertySchema;
         }
 
         return properties;
+    }
+
+    private static async Task<IOpenApiSchema> BuildPropertySchemaAsync(
+        JsonPropertyInfo property,
+        OpenApiSchemaTransformerContext context,
+        JsonSerializerOptions serializerOptions,
+        CancellationToken cancellationToken)
+    {
+        var typeInfo = serializerOptions.GetTypeInfo(property.PropertyType);
+
+        if (typeInfo.Kind is JsonTypeInfoKind.Object && typeInfo.Type != typeof(object))
+        {
+            var propertyPatchType = typeof(JsonMergePatchDocument<>).MakeGenericType(property.PropertyType);
+            var schema = await context
+                .GetOrCreateSchemaAsync(propertyPatchType, null, cancellationToken);
+
+            return MakeNullable(schema);
+        }
+
+        if (typeInfo.Kind is JsonTypeInfoKind.Dictionary && typeInfo.ElementType is not null)
+        {
+            var valueSchema = await BuildDictionaryValueSchemaAsync(
+                typeInfo.ElementType,
+                context,
+                serializerOptions,
+                cancellationToken);
+
+            var baseSchema = await context
+                .GetOrCreateSchemaAsync(property.PropertyType, null, cancellationToken);
+
+            if (valueSchema is null)
+            {
+                return MakeNullable(baseSchema);
+            }
+
+            var copy = (OpenApiSchema)baseSchema.CreateShallowCopy();
+            copy.AdditionalProperties = valueSchema;
+
+            return MakeNullable(copy);
+        }
+
+        var leafSchema = await context
+            .GetOrCreateSchemaAsync(property.PropertyType, null, cancellationToken);
+
+        return MakeNullable(leafSchema);
+    }
+
+    /// <summary>
+    /// Builds the patch-shaped schema for a dictionary value type, or returns
+    /// <c>null</c> when the values need no patch shaping (e.g. primitives).
+    /// </summary>
+    private static async Task<IOpenApiSchema?> BuildDictionaryValueSchemaAsync(
+        Type elementType,
+        OpenApiSchemaTransformerContext context,
+        JsonSerializerOptions serializerOptions,
+        CancellationToken cancellationToken)
+    {
+        var elementInfo = serializerOptions.GetTypeInfo(elementType);
+
+        if (elementInfo.Kind is JsonTypeInfoKind.Object && elementInfo.Type != typeof(object))
+        {
+            var wrapperType = typeof(JsonMergePatchDocument<>).MakeGenericType(elementType);
+            var patchSchema = await context
+                .GetOrCreateSchemaAsync(wrapperType, null, cancellationToken);
+
+            return MakeNullable(patchSchema);
+        }
+
+        if (elementInfo.Kind is JsonTypeInfoKind.Dictionary && elementInfo.ElementType is not null)
+        {
+            var nestedSchema = await BuildDictionaryValueSchemaAsync(
+                elementInfo.ElementType,
+                context,
+                serializerOptions,
+                cancellationToken);
+
+            if (nestedSchema is null)
+            {
+                return null;
+            }
+
+            var baseSchema = await context
+                .GetOrCreateSchemaAsync(elementType, null, cancellationToken);
+            
+            var copy = (OpenApiSchema)baseSchema.CreateShallowCopy();
+            copy.AdditionalProperties = nestedSchema;
+
+            return MakeNullable(copy);
+        }
+
+        return null;
     }
 
     private static IOpenApiSchema MakeNullable(IOpenApiSchema schema)
