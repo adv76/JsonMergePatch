@@ -1,7 +1,11 @@
 ﻿using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Adv76.JsonMergePatch;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -14,7 +18,7 @@ namespace Adv76.AspNetCore.JsonMergePatch;
 /// The JSON merge patch is automatically read from the HTTP request body.
 /// </remarks>
 /// <typeparam name="T">The type that the patch is for.</typeparam>
-public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatchDocument<T>>
+public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatchDocument<T>>, IEndpointParameterMetadataProvider
 {
     private readonly JsonMergeOptions? _mergeOptions;
     private readonly string _jsonBodyString;
@@ -69,5 +73,14 @@ public class JsonMergePatchDocument<T> : IBindableFromHttpContext<JsonMergePatch
         }
         
         return new JsonMergePatchDocument<T>(bodyString, merge);
+    }
+    
+    /// <inheritdoc/>
+    public static void PopulateMetadata(ParameterInfo parameter, EndpointBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(parameter);
+        ArgumentNullException.ThrowIfNull(builder);
+        
+        builder.Metadata.Add(new AcceptsMetadata(["application/merge-patch+json", "application/json"], parameter.ParameterType, false));
     }
 }

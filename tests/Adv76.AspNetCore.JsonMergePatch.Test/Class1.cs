@@ -19,4 +19,10 @@ public class Class1
     public string? ReadonlyString1 { get; set; }
 
     public Class2? Class2 { get; set; } = null;
+
+    public Dictionary<string, Class4> Dictionary1 { get; set; } = [];
+    
+    public Dictionary<string, Dictionary<string, Class5>> Dictionary2 { get; set; } = [];
+    
+    public List<Class6> List1 { get; set; } = [];
 }

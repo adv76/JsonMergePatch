@@ -8,13 +8,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
         <PackageReference Include="Microsoft.OpenApi" Version="2.12.2" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.16.17" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Adv76.AspNetCore.JsonMergePatch\Adv76.AspNetCore.JsonMergePatch.csproj" />
+      <ProjectReference Include="..\..\src\Adv76.AspNetCore.JsonMergePatch.OpenApi\Adv76.AspNetCore.JsonMergePatch.OpenApi.csproj" />
     </ItemGroup>
 
 </Project>
